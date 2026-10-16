@@ -1,0 +1,75 @@
+{
+  "name": "lumina-studio",
+  "productName": "Lumina Studio",
+  "version": "1.0.0",
+  "description": "Editor de imagens profissional para desktop: camadas, seleções, pincéis, filtros e mais.",
+  "main": "electron/main.js",
+  "author": "mello13256",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "web": "npx http-server src -p 8080 -c-1",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win --x64",
+    "dist:linux": "electron-builder --linux",
+    "dist:mac": "electron-builder --mac"
+  },
+  "devDependencies": {
+    "electron": "44.8.0",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "com.lumina.studio",
+    "productName": "Lumina Studio",
+    "copyright": "Copyright © 2026",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "src/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "fileAssociations": [
+      {
+        "ext": "lumina",
+        "name": "Projeto Lumina",
+        "description": "Projeto do Lumina Studio",
+        "role": "Editor",
+        "icon": "icon"
+      }
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Lumina Studio",
+      "artifactName": "LuminaStudio-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "LuminaStudio-Portable-${version}.${ext}"
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "target": ["AppImage"],
+      "category": "Graphics"
+    },
+    "mac": {
+      "icon": "build/icon.png",
+      "target": ["dmg"],
+      "category": "public.app-category.graphics-design"
+    }
+  }
+}
