@@ -13,9 +13,9 @@ import {
   isNative, EXPORT_FORMATS,
 } from './io.js';
 import { el, createCanvas, cloneCanvas, clamp, debounceFrame } from './utils.js';
+import { native, registerApp, standaloneBoot, setTitle, addRecent } from '../../shared/native.js';
 
 const $ = (s) => document.querySelector(s);
-const native = window.lumina;
 const IS_MAC = /Mac/.test(navigator.platform);
 
 const svg = (inner, size = 18) =>
@@ -89,7 +89,7 @@ function renderTabs() {
   el('span', { class: 'muted' }, `${Math.round(d.view.zoom * 100)}%`),
   el('button', { class: 'close', title: 'Fechar', onclick: (e) => { e.stopPropagation(); closeDoc(d); } }, '×'))));
   const d = app.doc;
-  document.title = d ? `${d.name}${d.dirty ? ' •' : ''} — Lumina Studio` : 'Lumina Studio';
+  setTitle(d ? `${d.name}${d.dirty ? ' •' : ''} — Lumina Foto` : 'Lumina Foto');
 }
 
 // ---------------------------------------------------------------------------
@@ -815,6 +815,7 @@ async function openFiles(files) {
   for (const f of files) {
     try {
       addDocument(await fileToDocument(f));
+      addRecent({ app: 'photo', name: f.name, path: f.path });
     } catch (err) {
       toast(`Não foi possível abrir ${f.name}: ${err.message}`);
     }
@@ -830,12 +831,11 @@ const commands = {
   new: newDocumentDialog,
   open: async () => openFiles(await pickFiles()),
   place: needsDoc(placeImage),
-  save: needsDoc(async () => { finishPending(); if (await saveProject(app.doc)) toast('Projeto salvo.'); }),
-  saveAs: needsDoc(async () => { finishPending(); if (await saveProject(app.doc, true)) toast('Projeto salvo.'); }),
+  save: needsDoc(async () => { finishPending(); if (await saveProject(app.doc)) { toast('Projeto salvo.'); recentDoc(); } }),
+  saveAs: needsDoc(async () => { finishPending(); if (await saveProject(app.doc, true)) { toast('Projeto salvo.'); recentDoc(); } }),
   export: needsDoc(() => { finishPending(); return exportDialog(); }),
   quickPng: needsDoc(async () => { finishPending(); const p = await exportImage(app.doc, { format: 'png' }); if (p) toast('PNG exportado.'); }),
   close: needsDoc(() => closeDoc()),
-  quit: () => (isNative ? window.close() : null),
 
   undo: needsDoc(() => {
     if (app.tool === transformTool && transformTool.running) { transformTool.cancel(); return; }
@@ -959,6 +959,10 @@ const commands = {
   about: aboutDialog,
 };
 
+function recentDoc() {
+  addRecent({ app: 'photo', name: app.doc.name, path: app.doc.filePath });
+}
+
 function flipLayer(h) {
   finishPending();
   const d = app.doc;
@@ -1001,7 +1005,6 @@ const MENUS = [
     { label: 'Exportação rápida como PNG', cmd: 'quickPng', key: 'Ctrl+Shift+E' },
     '-',
     { label: 'Fechar', cmd: 'close', key: 'Ctrl+W' },
-    isNative ? { label: 'Sair', cmd: 'quit', key: 'Ctrl+Q' } : null,
   ]],
   ['Editar', [
     { label: 'Desfazer', cmd: 'undo', key: 'Ctrl+Z' },
@@ -1361,22 +1364,21 @@ function setupDropAndPaste() {
 // Integração com o aplicativo desktop
 
 function setupNative() {
-  window.addEventListener('beforeunload', (e) => {
-    if (!isNative && app.docs.some((d) => d.dirty)) { e.preventDefault(); e.returnValue = ''; }
-  });
-  if (!isNative) return;
-  native.onCloseRequest(async () => {
-    for (const d of [...app.docs]) {
-      if (d.dirty) {
-        switchDoc(d);
-        const r = await askSave(d);
-        if (r === 'cancel') return;
+  registerApp({
+    openFiles: (files) => openFiles(files),
+    newDocument: (tpl) => (tpl === 'open' ? run('open') : run('new')),
+    unsaved: () => app.docs.filter((d) => d.dirty).map((d) => d.name),
+    beforeClose: async () => {
+      for (const d of [...app.docs]) {
+        if (d.dirty) {
+          switchDoc(d);
+          if ((await askSave(d)) === 'cancel') return false;
+        }
       }
-    }
-    native.confirmClose();
+      return true;
+    },
   });
-  native.onOpenFiles((files) => openFiles(files));
-  native.getLaunchFiles().then((files) => { if (files?.length) openFiles(files); });
+  standaloneBoot({ openFiles });
 }
 
 // ---------------------------------------------------------------------------

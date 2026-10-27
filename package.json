@@ -1,8 +1,8 @@
 {
   "name": "lumina-studio",
   "productName": "Lumina Studio",
-  "version": "1.0.0",
-  "description": "Editor de imagens profissional para desktop: camadas, seleções, pincéis, filtros e mais.",
+  "version": "2.0.0",
+  "description": "Suíte Lumina: editor de fotos, texto, planilhas e apresentações para desktop.",
   "main": "electron/main.js",
   "author": "mello13256",
   "license": "MIT",
@@ -13,11 +13,18 @@
     "dist": "electron-builder",
     "dist:win": "electron-builder --win --x64",
     "dist:linux": "electron-builder --linux",
-    "dist:mac": "electron-builder --mac"
+    "dist:mac": "electron-builder --mac",
+    "postinstall": "node scripts/vendor.js"
   },
   "devDependencies": {
+    "chart.js": "^4.6.1",
+    "docx": "^9.14.0",
+    "dompurify": "^3.4.17",
     "electron": "44.8.0",
-    "electron-builder": "26.15.3"
+    "electron-builder": "26.15.3",
+    "exceljs": "^4.4.0",
+    "mammoth": "^1.13.0",
+    "pptxgenjs": "^4.0.1"
   },
   "build": {
     "appId": "com.lumina.studio",
@@ -36,8 +43,26 @@
     "fileAssociations": [
       {
         "ext": "lumina",
-        "name": "Projeto Lumina",
-        "description": "Projeto do Lumina Studio",
+        "name": "Imagem Lumina",
+        "description": "Projeto do Lumina Foto",
+        "role": "Editor"
+      },
+      {
+        "ext": "lumdoc",
+        "name": "Documento Lumina",
+        "description": "Documento do Lumina Texto",
+        "role": "Editor"
+      },
+      {
+        "ext": "lumsheet",
+        "name": "Planilha Lumina",
+        "description": "Planilha do Lumina Planilhas",
+        "role": "Editor"
+      },
+      {
+        "ext": "lumslides",
+        "name": "Apresentação Lumina",
+        "description": "Apresentação do Lumina Apresentações",
         "role": "Editor"
       }
     ],
@@ -75,14 +100,14 @@
       "target": [
         "AppImage"
       ],
-      "category": "Graphics"
+      "category": "Office"
     },
     "mac": {
       "icon": "build/icon.png",
       "target": [
         "dmg"
       ],
-      "category": "public.app-category.graphics-design"
+      "category": "public.app-category.productivity"
     }
   }
 }

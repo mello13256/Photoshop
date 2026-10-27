@@ -3,8 +3,9 @@ import { Doc, Layer, documentFromImage } from './document.js';
 import { createCanvas, canvasToBlob, loadImage } from './utils.js';
 import { renderText } from './tools.js';
 
-const native = window.lumina;
-export const isNative = !!native?.isElectron;
+import { native, isNative } from '../../shared/native.js';
+
+export { isNative };
 
 export const PROJECT_EXT = 'lumina';
 const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'svg', 'ico', 'avif'];

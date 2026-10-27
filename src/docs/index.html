@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:; connect-src 'self' data: blob:">
+  <title>Lumina Texto</title>
+  <link rel="stylesheet" href="../shared/base.css">
+  <link rel="stylesheet" href="content.css">
+  <link rel="stylesheet" href="docs.css">
+  <script src="../shared/theme-boot.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <span class="app-badge" style="background:linear-gradient(135deg,#2f6bff,#4f9bff)" id="badge"></span>
+      <div class="doc-title-wrap">
+        <input id="doc-title" class="doc-title" spellcheck="false" aria-label="Título do documento">
+        <div class="header-sub"><nav id="menus"></nav><span id="save-state" class="save-state"></span></div>
+      </div>
+      <span class="spacer"></span>
+      <div id="header-actions" class="row"></div>
+    </header>
+    <div id="toolbar" class="toolbar"></div>
+    <div id="tabs" class="doc-tabs hidden"></div>
+    <div id="body">
+      <aside id="outline" class="side-panel left"></aside>
+      <div id="scroller">
+        <div id="paper" class="paper">
+          <div id="editor" class="doc-content"></div>
+        </div>
+      </div>
+      <aside id="side" class="side-panel right hidden"></aside>
+    </div>
+    <footer class="statusbar" id="status"></footer>
+  </div>
+  <div id="toasts"></div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

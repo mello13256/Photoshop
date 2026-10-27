@@ -3,85 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:; frame-src 'self'">
   <title>Lumina Studio</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="shared/base.css">
+  <link rel="stylesheet" href="shell/shell.css">
+  <script src="shared/theme-boot.js"></script>
 </head>
 <body>
-  <div id="app">
-    <header id="menubar">
-      <div class="brand" title="Lumina Studio">
-        <svg viewBox="0 0 32 32" width="18" height="18" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5ab0ff"/><stop offset="1" stop-color="#a66bff"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="7" fill="url(#lg)"/><circle cx="12" cy="12" r="4" fill="#fff"/><path d="M6 25l7-8 4 4 3-3 6 7z" fill="#fff" opacity=".9"/></svg>
-        <span>Lumina</span>
-      </div>
-      <nav id="menus"></nav>
-      <div class="spacer"></div>
-      <div id="zoom-indicator" title="Zoom"></div>
-    </header>
-
-    <div id="optionsbar"></div>
-
-    <div id="main">
-      <aside id="toolbar"></aside>
-
-      <section id="workspace">
-        <div id="tabs"></div>
-        <div id="canvas-wrap">
-          <canvas id="view"></canvas>
-          <div id="welcome">
-            <div class="welcome-card">
-              <h1>Lumina Studio</h1>
-              <p>Editor de imagens profissional para desktop.</p>
-              <div class="welcome-actions">
-                <button class="btn primary" data-cmd="new">Novo documento…</button>
-                <button class="btn" data-cmd="open">Abrir arquivo…</button>
-              </div>
-              <p class="muted">Dica: arraste imagens para cá ou cole com Ctrl+V.</p>
-            </div>
-          </div>
-        </div>
-        <footer id="statusbar">
-          <span id="st-zoom"></span>
-          <span id="st-size"></span>
-          <span id="st-pos"></span>
-          <span id="st-info"></span>
-          <span class="spacer"></span>
-          <span id="st-hint"></span>
-        </footer>
-      </section>
-
-      <aside id="panels">
-        <section class="panel" id="panel-color">
-          <h3>Cor</h3>
-          <div class="panel-body" id="color-picker"></div>
-        </section>
-        <section class="panel" id="panel-swatches">
-          <h3>Amostras</h3>
-          <div class="panel-body" id="swatches"></div>
-        </section>
-        <section class="panel grow" id="panel-layers">
-          <h3>Camadas</h3>
-          <div class="panel-body">
-            <div class="layer-props">
-              <select id="layer-blend" title="Modo de mesclagem"></select>
-              <label class="opacity-ctl" title="Opacidade da camada">
-                <span>Opac.</span>
-                <input id="layer-opacity" type="range" min="0" max="100" value="100">
-                <span id="layer-opacity-val">100%</span>
-              </label>
-            </div>
-            <ul id="layers"></ul>
-            <div class="panel-actions" id="layer-actions"></div>
-          </div>
-        </section>
-        <section class="panel" id="panel-history">
-          <h3>Histórico</h3>
-          <div class="panel-body"><ol id="history"></ol></div>
-        </section>
-      </aside>
-    </div>
+  <div id="shell">
+    <nav id="rail" aria-label="Aplicativos"></nav>
+    <main id="stage">
+      <section id="home" class="view"></section>
+    </main>
   </div>
   <div id="toasts"></div>
-  <script type="module" src="js/main.js"></script>
+  <script type="module" src="shell/shell.js"></script>
 </body>
 </html>

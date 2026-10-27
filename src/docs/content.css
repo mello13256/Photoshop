@@ -1,0 +1,98 @@
+/* Estilo do conteúdo do documento (editor e exportação para PDF/HTML). */
+.doc-content {
+  --doc-font: Calibri, Carlito, "Segoe UI", Arial, sans-serif;
+  --doc-head-font: var(--doc-font);
+  --doc-size: 11pt;
+  --doc-line: 1.5;
+  --doc-space: 8pt;
+  --doc-indent: 0cm;
+  --doc-align: left;
+  --doc-color: #1f2328;
+  --doc-head-color: #1f2a44;
+  --doc-accent: #3b6cf6;
+  --doc-head-case: none;
+  font-family: var(--doc-font);
+  font-size: var(--doc-size);
+  line-height: var(--doc-line);
+  color: var(--doc-color);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  outline: none;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.doc-content > * { margin: 0 0 var(--doc-space); }
+.doc-content p { text-align: var(--doc-align); text-indent: var(--doc-indent); }
+.doc-content li p, .doc-content td p, .doc-content th p { text-indent: 0; }
+.doc-content h1, .doc-content h2, .doc-content h3, .doc-content h4, .doc-content .title, .doc-content .subtitle {
+  font-family: var(--doc-head-font); color: var(--doc-head-color); line-height: 1.25; text-indent: 0; text-transform: var(--doc-head-case);
+}
+.doc-content h1 { font-size: calc(1.85em * var(--hs, 1)); font-weight: 700; margin: 1em 0 .45em; }
+.doc-content h2 { font-size: calc(1.4em * var(--hs, 1)); font-weight: 650; margin: .95em 0 .4em; }
+.doc-content h3 { font-size: calc(1.17em * var(--hs, 1)); font-weight: 650; margin: .85em 0 .35em; }
+.doc-content h4 { font-size: 1em; font-weight: 650; margin: .8em 0 .3em; }
+.doc-content .title { font-size: 2.6em; font-weight: 700; margin: .2em 0 .15em; letter-spacing: -.02em; text-align: inherit; }
+.doc-content .subtitle { font-size: 1.3em; font-weight: 400; color: #5f6b7a; margin: 0 0 1em; }
+.doc-content > :first-child { margin-top: 0; }
+.doc-content blockquote {
+  border-left: 3px solid var(--doc-accent); padding: .25em 0 .25em 1em; margin-left: 0; color: #4a5361; font-style: italic;
+}
+.doc-content pre {
+  font-family: "Cascadia Code", Consolas, ui-monospace, monospace; font-size: .88em; line-height: 1.5; background: #f4f6f9;
+  border: 1px solid #e3e7ee; border-radius: 6px; padding: .8em 1em; white-space: pre-wrap; text-indent: 0;
+}
+.doc-content code { font-family: "Cascadia Code", Consolas, ui-monospace, monospace; font-size: .9em; background: #eef1f6; border-radius: 4px; padding: .1em .35em; }
+.doc-content pre code { background: none; padding: 0; }
+.doc-content a { color: var(--doc-accent); text-decoration: underline; }
+.doc-content ul, .doc-content ol { padding-left: 1.6em; }
+.doc-content li { margin: .15em 0; }
+.doc-content li > ul, .doc-content li > ol { margin: .15em 0; }
+.doc-content ul.checklist { list-style: none; padding-left: .3em; }
+.doc-content ul.checklist > li { position: relative; padding-left: 1.7em; }
+.doc-content ul.checklist > li::before {
+  content: ""; position: absolute; left: 0; top: .28em; width: .95em; height: .95em; border: 1.5px solid #8a94a6; border-radius: 4px; background: #fff;
+}
+.doc-content ul.checklist > li[data-checked="true"] { color: #8a94a6; text-decoration: line-through; }
+.doc-content ul.checklist > li[data-checked="true"]::before {
+  background: var(--doc-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/80% no-repeat;
+  border-color: var(--doc-accent);
+}
+.doc-content hr { border: 0; border-top: 1px solid #d5dae3; margin: 1.2em 0; }
+.doc-content table { border-collapse: collapse; width: 100%; table-layout: fixed; text-indent: 0; }
+.doc-content td, .doc-content th { border: 1px solid #cfd5df; padding: .35em .55em; vertical-align: top; text-align: left; min-width: 2em; }
+.doc-content th { background: #f1f4f9; font-weight: 600; }
+.doc-content table.striped tr:nth-child(even) td { background: #f8fafc; }
+.doc-content img { max-width: 100%; height: auto; border-radius: 2px; }
+.doc-content img.align-center { display: block; margin: .4em auto; }
+.doc-content img.align-left { float: left; margin: .2em 1em .5em 0; }
+.doc-content img.align-right { float: right; margin: .2em 0 .5em 1em; }
+.doc-content figure { margin: 1em 0; text-align: center; }
+.doc-content figcaption { font-size: .85em; color: #5f6b7a; margin-top: .3em; }
+.doc-content .callout {
+  display: flex; gap: .7em; padding: .8em 1em; border-radius: 8px; background: #eef4ff; border: 1px solid #d6e2ff; text-indent: 0;
+}
+.doc-content .callout.warning { background: #fff7e6; border-color: #ffe2a8; }
+.doc-content .callout.success { background: #eafaf1; border-color: #bfe9d2; }
+.doc-content .callout.danger { background: #fff0f0; border-color: #ffc9c9; }
+.doc-content .callout > .callout-icon { flex-shrink: 0; user-select: none; }
+.doc-content .callout > .callout-body { flex: 1; min-width: 0; }
+.doc-content .page-break { break-after: page; page-break-after: always; height: 0; margin: 0; border: 0; }
+.doc-content .toc { border: 1px solid #e3e7ee; border-radius: 8px; padding: .8em 1.2em; text-indent: 0; }
+.doc-content .toc .toc-title { font-weight: 700; font-family: var(--doc-head-font); margin-bottom: .4em; text-transform: var(--doc-head-case); }
+.doc-content .toc a { display: block; color: inherit; text-decoration: none; padding: .1em 0; }
+.doc-content .toc a.l2 { padding-left: 1.2em; }
+.doc-content .toc a.l3 { padding-left: 2.4em; font-size: .95em; }
+.doc-content .align-center { text-align: center !important; }
+.doc-content mark { padding: 0 .1em; border-radius: 2px; }
+.doc-content .cover { text-align: center; text-indent: 0; }
+
+/* ABNT: títulos do mesmo tamanho do texto; seção primária em maiúsculas */
+.doc-content.abnt-heads h1, .doc-content.abnt-heads h2, .doc-content.abnt-heads h3, .doc-content.abnt-heads h4 { font-size: 1em; margin: 1.5em 0 1em; }
+.doc-content.abnt-heads h2, .doc-content.abnt-heads h3, .doc-content.abnt-heads h4 { text-transform: none; }
+.doc-content.abnt-heads h3 { font-style: italic; }
+
+@media print {
+  .doc-content .page-break { border: 0 !important; }
+  .doc-content h1, .doc-content h2, .doc-content h3 { break-after: avoid; }
+  .doc-content table, .doc-content img, .doc-content pre, .doc-content .callout { break-inside: avoid; }
+}
