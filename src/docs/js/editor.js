@@ -329,20 +329,61 @@ export class Editor {
     return null;
   }
 
+  // Listas criadas manualmente (o execCommand mescla listas vizinhas de tipos diferentes).
   list(kind) {
     this.focus();
-    const inList = this.closest('UL') || this.closest('OL');
-    const isCheck = inList?.classList.contains('checklist');
-    if (kind === 'check') {
-      if (inList && isCheck) { document.execCommand('insertUnorderedList'); this.changed(true); return; }
-      if (!inList || inList.tagName !== 'UL') document.execCommand('insertUnorderedList');
-      const ul = this.closest('UL');
-      ul?.classList.add('checklist');
-    } else {
-      if (isCheck && kind === 'bullet') { inList.classList.remove('checklist'); this.changed(true); return; }
-      document.execCommand(kind === 'number' ? 'insertOrderedList' : 'insertUnorderedList');
-      this.closest('UL')?.classList.remove('checklist');
+    const sel = this.saveSelection();
+    const tag = kind === 'number' ? 'OL' : 'UL';
+    const current = this.closest('UL') || this.closest('OL');
+    if (current) {
+      const isCheck = current.classList.contains('checklist');
+      const sameKind = current.tagName === tag && (kind === 'check') === isCheck;
+      if (sameKind) {
+        // Remove a lista: itens viram parágrafos
+        const frag = document.createDocumentFragment();
+        for (const li of [...current.children]) {
+          const p = document.createElement('p');
+          while (li.firstChild) p.append(li.firstChild);
+          if (!p.firstChild) p.innerHTML = '<br>';
+          frag.append(p);
+        }
+        current.replaceWith(frag);
+        this.restoreSelection(sel);
+      } else {
+        const n = current.tagName === tag ? current : document.createElement(tag);
+        if (n !== current) {
+          for (const a of current.attributes) n.setAttribute(a.name, a.value);
+          while (current.firstChild) n.append(current.firstChild);
+          current.replaceWith(n);
+        }
+        n.classList.toggle('checklist', kind === 'check');
+        if (!n.classList.length) n.removeAttribute('class');
+        for (const li of n.children) {
+          if (kind === 'check' && !li.dataset.checked) li.dataset.checked = 'false';
+          if (kind !== 'check') li.removeAttribute('data-checked');
+        }
+        this.restoreSelection(sel);
+      }
+      this.changed(true);
+      return;
     }
+    const blocks = this.selectedBlocks().filter((b) => b.parentNode === this.root && TEXT_BLOCKS.has(b.tagName) && !b.classList.contains('toc') && !b.classList.contains('callout'));
+    const inner = blocks.length ? blocks : this.selectedBlocks().filter((b) => TEXT_BLOCKS.has(b.tagName));
+    if (!inner.length) return;
+    const list = document.createElement(tag);
+    if (kind === 'check') list.className = 'checklist';
+    inner[0].before(list);
+    for (const b of inner) {
+      const li = document.createElement('li');
+      if (kind === 'check') li.dataset.checked = 'false';
+      while (b.firstChild) li.append(b.firstChild);
+      if (!li.firstChild) li.innerHTML = '<br>';
+      list.append(li);
+      b.remove();
+    }
+    const r = this.range();
+    if (!r || !list.contains(r.startContainer)) placeCaret(list.lastElementChild, false);
+    else this.restoreSelection(sel);
     this.changed(true);
   }
 

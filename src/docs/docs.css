@@ -119,3 +119,8 @@ body.focus-mode .focus-exit { display: inline-flex; }
 .stats-grid b { text-align: right; font-variant-numeric: tabular-nums; }
 .status-btn { border: 0; background: none; color: inherit; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
 .status-btn:hover { background: var(--hover); }
+#toolbar { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+#toolbar::-webkit-scrollbar { height: 4px; }
+.tb-select.style-sel { width: 128px; }
+.tb-select.font-sel { width: 118px; }
+@media (max-width: 1500px) { #toolbar .tb-btn .tb-label { display: none; } }
