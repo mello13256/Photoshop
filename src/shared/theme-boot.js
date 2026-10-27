@@ -3,5 +3,5 @@
   try {
     var p = localStorage.getItem('lumina.theme') || 'system';
     document.documentElement.dataset.theme = p === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : p;
-  } catch (e) { /* armazenamento indisponível */ }
+  } catch (_) { /* armazenamento indisponível */ }
 })();

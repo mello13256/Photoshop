@@ -26,8 +26,10 @@ export const fileName = (p) => String(p).split(/[\\/]/).pop();
 // ---- Abrir ---------------------------------------------------------------
 
 // Retorna [{ name, path, data: Uint8Array }]
+const localize = (f) => ({ ...f, data: new Uint8Array(f.data) });
+
 export async function pickFiles(filters, { multiple = true } = {}) {
-  if (isNative) return native.openFile(filters);
+  if (isNative) return (await native.openFile(filters)).map(localize);
   const exts = filters.flatMap((f) => f.extensions).filter((e) => e !== '*');
   return new Promise((resolve) => {
     const input = document.createElement('input');
@@ -45,7 +47,7 @@ export async function pickFiles(filters, { multiple = true } = {}) {
 
 export async function readPath(path) {
   if (!isNative) throw new Error('Disponível apenas no aplicativo desktop.');
-  return native.readPath(path);
+  return localize(await native.readPath(path));
 }
 
 export async function pickImageDataUrl() {
@@ -165,6 +167,11 @@ export function initTheme() {
 
 // api: { openFiles(files), newDocument(template), beforeClose(): Promise<boolean>, unsaved(): string[] }
 export function registerApp(api) {
+  // Arquivos vindos da casca pertencem a outro contexto (iframe): copia os bytes para este.
+  if (api.openFiles) {
+    const open = api.openFiles;
+    api.openFiles = (files) => open(files.map((f) => ({ ...f, data: new Uint8Array(f.data) })));
+  }
   window.luminaApp = api;
   window.addEventListener('beforeunload', (e) => {
     if (!isNative && window.parent === window && api.unsaved?.().length) { e.preventDefault(); e.returnValue = ''; }

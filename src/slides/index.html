@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:; connect-src 'self' data: blob:">
+  <title>Lumina Apresentações</title>
+  <link rel="stylesheet" href="../shared/base.css">
+  <link rel="stylesheet" href="slides.css">
+  <script src="../shared/theme-boot.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <span class="app-badge" style="background:linear-gradient(135deg,#ff7a45,#ff4d8d)" id="badge"></span>
+      <div class="doc-title-wrap">
+        <input id="doc-title" class="doc-title" spellcheck="false" aria-label="Título da apresentação">
+        <div class="header-sub"><nav id="menus"></nav><span id="save-state" class="save-state"></span></div>
+      </div>
+      <span class="spacer"></span>
+      <div id="header-actions" class="row"></div>
+    </header>
+    <div id="toolbar" class="toolbar"></div>
+    <div id="deck-tabs" class="doc-tabs hidden"></div>
+    <div id="body">
+      <aside id="thumbs" tabindex="0" aria-label="Slides"></aside>
+      <section id="center">
+        <div id="stage">
+          <div id="holder"></div>
+          <div id="overlay"></div>
+        </div>
+        <div id="notes-wrap">
+          <textarea id="notes" placeholder="Clique para adicionar anotações do apresentador"></textarea>
+        </div>
+      </section>
+      <aside id="props"></aside>
+    </div>
+    <footer class="statusbar" id="status"></footer>
+  </div>
+  <div id="present" class="hidden"></div>
+  <div id="toasts"></div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

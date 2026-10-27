@@ -1,14 +1,14 @@
 // Lumina Texto — aplicação principal.
 import {
-  el, $, $$, toast, dialog, prompt, field, select, menubar, toolButton, sep, shortcuts, popover, closePopovers,
+  el, $, toast, dialog, prompt, field, select, menubar, toolButton, sep, shortcuts, popover, closePopovers,
   colorPopover, dropdown, debounce, clamp, escapeHtml,
 } from '../../shared/ui.js';
 import { icon } from '../../shared/icons.js';
 import {
-  pickFiles, saveFile, exportPdf, isNative, registerApp, standaloneBoot, setTitle, addRecent, extOf, baseName,
+  pickFiles, saveFile, exportPdf, isNative, registerApp, standaloneBoot, setTitle, addRecent, extOf,
   initTheme, pickImageDataUrl, fmtDate, fileName,
 } from '../../shared/native.js';
-import { Editor, History, placeCaret, paragraph, cleanHTML } from './editor.js';
+import { Editor, placeCaret, cleanHTML } from './editor.js';
 import * as io from './io.js';
 import { TEMPLATES } from './templates.js';
 

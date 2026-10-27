@@ -162,7 +162,7 @@ export class Sheet {
       id: this.id, name: this.name,
       cells: [...this.cells].map(([k, c]) => [k, { v: c.v, f: c.f, s: c.s, note: c.note, forceText: c.forceText }]),
       rows: this.rows.toJSON(), cols: this.cols.toJSON(), merges: clone(this.merges), freeze: clone(this.freeze),
-      cf: this.cf.map(({ _stats, ...rule }) => clone(rule)),
+      cf: this.cf.map((rule) => { const r = { ...rule }; delete r._stats; return clone(r); }),
       charts: clone(this.charts), filter: clone(this.filter), validations: clone(this.validations), tabColor: this.tabColor, showGrid: this.showGrid,
     };
   }

@@ -415,7 +415,7 @@ export class Grid {
     ];
     for (const p of panes) if (p.cols.length && p.rows.length) this.drawPane(p);
 
-    this.drawSelection(fw, fh);
+    this.drawSelection();
     this.drawHeaders(frozenCols, mainCols, frozenRows, mainRows, fw, fh);
     if (fc || fr) {
       ctx.strokeStyle = C.frozen;
@@ -637,7 +637,7 @@ export class Grid {
     ctx.fill();
   }
 
-  drawSelection(fw, fh) {
+  drawSelection() {
     const { ctx } = this;
     const C = this.colors;
     ctx.save();

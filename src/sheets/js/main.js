@@ -20,7 +20,6 @@ import * as io from './io.js';
 import { SHEET_TEMPLATES } from './templates.js';
 
 const S = { books: [], book: null, seq: 1, clipboard: null, painter: null };
-const book = () => S.book;
 const wb = () => S.book.wb;
 const sheet = () => S.book.wb.sheet;
 

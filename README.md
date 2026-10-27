@@ -1,94 +1,112 @@
 # Lumina Studio
 
-Editor de imagens para desktop (Windows, Linux e macOS), inspirado no Photoshop, com interface em português.
+Suíte de criação e produtividade para desktop (Windows, Linux e macOS), com interface em português e funcionamento offline. São quatro apps num só programa:
 
-![Ícone](build/icon.png)
-
-## Recursos
-
-**Documentos**
-- Várias abas abertas ao mesmo tempo, arrastar e soltar arquivos, colar imagens (Ctrl+V)
-- Abre PNG, JPEG, WebP, GIF, BMP, SVG, ICO e AVIF
-- Projeto próprio `.lumina` que guarda camadas, opacidade, modos de mesclagem e textos editáveis
-- Exporta PNG, JPEG e WebP com qualidade e escala ajustáveis
-- Histórico com até 60 passos por documento e painel para voltar a qualquer passo
-
-**Camadas**
-- Criar, duplicar, excluir, reordenar (arrastar no painel), renomear, bloquear e ocultar
-- 16 modos de mesclagem (Multiplicação, Divisão, Sobrepor, Luz suave, Cor, Luminosidade…)
-- Opacidade por camada, mesclar para baixo, mesclar visíveis, achatar
-- Camada via cópia (Ctrl+J) e via recorte (Ctrl+Shift+J)
-- Camadas de texto que continuam editáveis
-
-**Ferramentas** (atalhos iguais aos do Photoshop)
-
-| Tecla | Ferramenta | Tecla | Ferramenta |
+| App | Para quê | Abre | Salva / exporta |
 |---|---|---|---|
-| V | Mover (com seleção automática de camada) | B | Pincel (dureza, fluxo, pressão da caneta, modos) |
-| M | Letreiro retangular / elíptico | N | Lápis (pixel art) |
-| L | Laço livre e poligonal | E | Borracha |
-| W | Varinha mágica | S | Carimbo (clonagem) |
-| C | Cortar (proporções predefinidas) | R | Desfoque / Nitidez por pincel |
-| I | Conta-gotas | O | Subexposição / Superexposição / Esponja |
-| G | Balde de tinta e Degradê (linear, radial, angular, refletido) | T | Texto |
-| U | Formas (retângulo, arredondado, elipse, polígono, estrela, linha, seta) | H / Z | Mão / Zoom |
-| Ctrl+T | Transformação livre (escalar, girar, espelhar) | | |
+| **Lumina Foto** | Edição de imagens | PNG, JPG, WebP, GIF, BMP, SVG, `.lumina` | `.lumina`, PNG, JPG, WebP |
+| **Lumina Texto** | Documentos | `.lumdoc`, Word (`.docx`), Markdown, HTML, TXT | `.lumdoc`, Word, PDF, HTML, Markdown, TXT |
+| **Lumina Planilhas** | Planilhas e análise de dados | `.lumsheet`, Excel (`.xlsx`), CSV | `.lumsheet`, Excel, CSV, PDF |
+| **Lumina Apresentações** | Slides | `.lumslides` | `.lumslides`, PowerPoint (`.pptx`), PDF, PNG |
 
-**Seleções**: nova, adicionar (Shift), subtrair (Alt), interseção; difusão, expandir, contrair, suavizar, inverter, selecionar pixels da camada (Ctrl+clique na miniatura), traçar e preencher.
+A tela inicial reúne os modelos, os arquivos recentes e um botão para abrir qualquer arquivo. Ela escolhe sozinha o app certo. Também dá para arrastar arquivos para a janela. O tema pode ser claro, escuro ou seguir o sistema.
 
-**Ajustes** (Imagem ▸ Ajustes): Brilho/Contraste, Níveis (com histograma), Curvas, Exposição, Vibração, Matiz/Saturação (com Colorir), Equilíbrio de cores, Preto e branco, Inverter, Posterizar, Limiar, Sépia, Dessaturar, Tom automático.
+## Lumina Texto
 
-**Filtros**: Desfoque gaussiano, de movimento e radial, Máscara de nitidez, Ruído, Mediana, Pixelizar, Detectar bordas, Relevo, Pintura a óleo, Vinheta, Sombra projetada, Contorno. Todos com visualização ao vivo e respeitando a seleção.
+- Estilos de parágrafo (Título, Subtítulo, Título 1–4, Citação, Código), fontes, tamanhos, cores, realce, alinhamento, entrelinhas e recuos
+- **Estilo do documento**: troca a aparência do documento inteiro de uma vez. Presets: Padrão, **ABNT**, Moderno, Clássico e Compacto
+- **Comandos com `/`**: digite `/` para inserir títulos, listas, tabela, imagem, sumário, destaques, divisor, quebra de página…
+- **Atalhos Markdown**: `# ` para título, `- ` para lista, `1. ` para lista numerada, `[] ` para lista de tarefas, `> ` para citação e `**negrito**`, `*itálico*`, `` `código` ``
+- Barra flutuante ao selecionar texto, tabelas com ferramentas próprias e imagens redimensionáveis com alinhamento
+- **Sumário automático**, painel de estrutura, localizar e substituir (com expressão regular), contagem de palavras e modo foco
+- **Histórico de versões** guardado dentro do arquivo, recuperação automática após travamentos e várias abas
+- Configuração de página (A4, Carta, Ofício…, margens, orientação, números de página)
+- Corretor ortográfico em português (no app desktop)
+- Modelos: trabalho acadêmico ABNT (capa, sumário, seções, referências), relatório, carta, currículo e ata
 
-**Imagem**: tamanho da imagem, tamanho da tela (com âncora), girar 90°/180°, espelhar, cortar para seleção, aparar transparência.
+## Lumina Planilhas
+
+- Grade rápida desenhada em canvas, que cresce até 1.048.576 linhas
+- **Fórmulas em português ou em inglês**: `=SOMA(A1:A10)` e `=SUM(A1:A10)` funcionam igual. Aceita `;` com vírgula decimal (`=ARRED(A1*1,5;2)`) ou `,`
+- **Mais de 200 funções**, entre elas:
+  - PROCV, PROCX, ÍNDICE/CORRESP;
+  - SOMASES, CONT.SES, MÉDIASES;
+  - datas, textos, financeiras (PGTO, TIR, VPL…) e estatísticas;
+  - SE, SES, SEERRO e LET.
+- **Matrizes dinâmicas**: FILTRO, CLASSIFICAR, ÚNICO, SEQUÊNCIA, PEGAR, EMPILHARV… com resultados que se espalham pelas células vizinhas e referência `A1#`
+- Autocompletar de funções com dica de sintaxe, referências coloridas e **clique para inserir referências**, inclusive de outra aba
+- Alça de preenchimento com séries inteligentes (1, 2, 3… / jan, fev… / segunda, terça… / Item 1, Item 2…)
+- Formatos brasileiros (R$, %, `dd/mm/aaaa`, `1.234,56`) e códigos personalizados (`#.##0,00 "kg"`)
+- Formatação condicional (escalas de cor, barras de dados, maior/menor que, duplicados, top N…), bordas, mesclar células e pincel de formatação
+- Filtros, classificação em vários níveis, remover duplicatas e listas suspensas (validação)
+- **Tabela dinâmica feita de fórmulas**, que se atualiza sozinha quando os dados mudam
+- **Gráficos** (colunas, barras, linhas, área, pizza, rosca, dispersão) que você pode arrastar e redimensionar
+- Congelar painéis, várias planilhas por arquivo, copiar e colar com o Excel e o Google Sheets, e barra de status com soma, média, mínimo e máximo
+- Modelos: orçamento pessoal, lista de tarefas e controle de vendas
+
+## Lumina Apresentações
+
+- 8 temas modernos (Claro, Aurora, Meia-noite, Coral, Floresta, Pitch, Papel e Oceano) e 9 layouts
+- Texto, formas (11 tipos), imagens com filtros e cantos arredondados, tabelas e **gráficos nativos**
+- **Guias magnéticas** ao arrastar, alinhar e distribuir, girar, camadas, duplicar arrastando com Alt e seleção por área
+- Fundos em cor, degradê ou imagem, **transições** (esmaecer, empurrar, zoom, cobrir, girar) e **animações de entrada**
+- **Modo apresentação** em tela cheia:
+  - clique ou setas para avançar e voltar;
+  - tela preta ou branca (B/W) e ponteiro laser (L);
+  - anotações com cronômetro e prévia do próximo slide (S);
+  - ir direto a um slide com número + Enter.
+- Exporta para **PowerPoint** (com gráficos editáveis e anotações), PDF e PNG
+- Modelo de pitch de startup com 8 slides
+
+## Lumina Foto
+
+Camadas com 16 modos de mesclagem, seleções (letreiro, laço, varinha mágica), transformação livre, pincel com pressão, carimbo, desfoque/nitidez, subexposição/superexposição, degradê, texto editável, formas, mais de 25 ajustes e filtros com visualização ao vivo, e histórico.
 
 ## Baixar o `.exe`
 
-O GitHub Actions compila o aplicativo automaticamente a cada push:
+O GitHub Actions compila o aplicativo a cada push:
 
 1. Abra a aba **Actions** do repositório e escolha a execução mais recente de **Build desktop**.
-2. Em **Artifacts**, baixe **LuminaStudio-Windows**. Ele traz:
-   - `LuminaStudio-Setup-<versão>.exe`: instalador com atalho na área de trabalho
-   - `LuminaStudio-Portable-<versão>.exe`: roda sem instalar
+2. Em **Artifacts**, baixe **LuminaStudio-Windows**. Ele traz o instalador (`LuminaStudio-Setup-<versão>.exe`) e a versão portátil (`LuminaStudio-Portable-<versão>.exe`).
 
-Para publicar uma versão oficial, crie uma tag (`git tag v1.0.0 && git push --tags`). O workflow anexa os instaladores à página de *Releases*.
+Para publicar uma versão oficial, crie uma tag (`git tag v2.0.0 && git push --tags`). Os instaladores vão para a página de *Releases*.
 
-> Como o executável não é assinado digitalmente, o Windows SmartScreen pode avisar na primeira execução. Clique em "Mais informações" e depois em "Executar assim mesmo".
+> Como o executável não tem assinatura digital, o Windows SmartScreen pode avisar na primeira execução. Clique em "Mais informações" e depois em "Executar assim mesmo".
 
 ## Desenvolvimento
 
 Requisitos: Node.js 20 ou mais recente.
 
 ```bash
-npm install          # instala Electron e electron-builder
+npm install          # instala dependências e copia as bibliotecas para src/vendor
 npm start            # abre o app desktop
-npm run web          # abre no navegador em http://localhost:8080 (sem instalar nada além do Node)
+npm run web          # abre no navegador em http://localhost:8080
 
-npm run dist:win     # gera o .exe (instalador + portátil) em dist/
+npm run dist:win     # gera o .exe em dist/
 npm run dist:linux   # gera AppImage
 npm run dist:mac     # gera .dmg (precisa de macOS)
 ```
 
-No Linux, `npm run dist:win` gera o `.exe` portátil sem Wine; o instalador NSIS precisa do Wine ou do workflow do GitHub.
-
 ### Estrutura
 
 ```
-electron/main.js      processo principal: janela, diálogos nativos, arquivos, área de transferência
-electron/preload.js   ponte segura (contextIsolation + sandbox) exposta como window.lumina
-src/index.html        interface
-src/css/style.css     tema escuro
-src/js/main.js        menus, atalhos, painéis, diálogos e comandos
-src/js/document.js    documento, camadas, histórico (copy-on-write) e operações de imagem
-src/js/view.js        área de trabalho: zoom, panorâmica, renderização incremental
-src/js/tools.js       todas as ferramentas
-src/js/filters.js     ajustes e filtros
-src/js/selection.js   máscaras de seleção, "formigas marchando", preenchimento por inundação
-src/js/io.js          abrir/salvar/exportar (nativo ou navegador)
+electron/            processo principal (protocolo app://, diálogos, PDF, corretor, menu de contexto) e preload
+src/index.html       tela inicial da suíte (src/shell/)
+src/shared/          estilo visual, componentes de interface, ícones e ponte com o sistema de arquivos
+src/photo/           Lumina Foto
+src/docs/            Lumina Texto (editor, importação/exportação, modelos)
+src/sheets/          Lumina Planilhas (motor de fórmulas, grade, gráficos, Excel/CSV)
+src/slides/          Lumina Apresentações (temas, renderização, editor, PPTX/PDF)
+src/vendor/          bibliotecas copiadas de node_modules no "npm install" (não versionadas)
+scripts/vendor.js    cópia das bibliotecas
 ```
+
+Bibliotecas de terceiros (todas com licença livre): [ExcelJS](https://github.com/exceljs/exceljs) (xlsx), [Mammoth](https://github.com/mwilliamson/mammoth.js) (leitura de docx), [docx](https://github.com/dolanmiu/docx) (escrita de docx), [PptxGenJS](https://github.com/gitbrent/PptxGenJS) (pptx), [Chart.js](https://www.chartjs.org/) (gráficos) e [DOMPurify](https://github.com/cure53/DOMPurify) (limpeza de HTML colado).
 
 ### Arquitetura em resumo
 
-- Cada camada é um `<canvas>` do tamanho do documento. As edições **nunca alteram** um canvas que já está no histórico: elas criam uma cópia nova (copy-on-write). Por isso desfazer e refazer são instantâneos e o histórico só ocupa memória com o que realmente mudou.
-- Durante um traço, a camada mostra uma prévia (`layer.preview`), e só a região alterada (retângulo sujo) é recomposta. Assim o pincel continua fluido em imagens grandes, por exemplo 4000×3000 com várias camadas.
-- Seleções são máscaras alfa. Por isso suportam difusão e combinações (adicionar, subtrair, interseção), e todas as ferramentas e filtros as respeitam.
+- Cada app roda num `iframe` da tela inicial, servido pelo protocolo `app://`, então todos têm a mesma origem. Os apps continuam abertos quando você troca de um para outro, e o fechamento do programa pergunta sobre arquivos não salvos em todos eles.
+- **Planilhas**: o motor de fórmulas é próprio. Ele tem analisador léxico, analisador de precedência e avaliação preguiçosa de intervalos, além de detectar referências circulares e espalhar resultados matriciais. Inserir ou excluir linhas e colunas reescreve as referências das fórmulas em todas as abas. O desfazer funciona por transações.
+- **Texto**: o editor usa `contentEditable` com histórico próprio (instantâneos e restauração da posição do cursor), para que o desfazer funcione também nas operações estruturais (tabelas, listas, blocos).
+- **Apresentações**: um único renderizador gera o slide em DOM para edição, miniaturas, apresentação e exportação. Por isso o PDF sai igual ao que aparece na tela.
+- **Foto**: canvases imutáveis no histórico (copy-on-write) e recomposição apenas da região alterada.
