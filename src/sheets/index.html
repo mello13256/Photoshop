@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:; connect-src 'self' data: blob:">
+  <title>Lumina Planilhas</title>
+  <link rel="stylesheet" href="../shared/base.css">
+  <link rel="stylesheet" href="sheets.css">
+  <script src="../shared/theme-boot.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <span class="app-badge" style="background:linear-gradient(135deg,#1f9d6b,#3fcf8e)" id="badge"></span>
+      <div class="doc-title-wrap">
+        <input id="doc-title" class="doc-title" spellcheck="false" aria-label="Nome da planilha">
+        <div class="header-sub"><nav id="menus"></nav><span id="save-state" class="save-state"></span></div>
+      </div>
+      <span class="spacer"></span>
+      <div id="header-actions" class="row"></div>
+    </header>
+    <div id="toolbar" class="toolbar"></div>
+    <div id="book-tabs" class="doc-tabs hidden"></div>
+    <div id="formula-row">
+      <input id="name-box" spellcheck="false" aria-label="Caixa de nome" title="Caixa de nome — digite um endereço e Enter">
+      <button id="fx-btn" class="fx" title="Inserir função (Shift+F3)">fx</button>
+      <textarea id="formula-input" rows="1" spellcheck="false" aria-label="Barra de fórmulas" placeholder="Digite um valor ou uma fórmula começando com ="></textarea>
+    </div>
+    <div id="grid"></div>
+    <footer class="sheet-footer">
+      <div id="sheet-tabs"></div>
+      <span class="spacer"></span>
+      <div id="sel-stats"></div>
+      <div class="zoom-ctl">
+        <button id="zoom-out" class="icon-btn" title="Reduzir">−</button>
+        <button id="zoom-val" class="zoom-val" title="Voltar para 100%">100%</button>
+        <button id="zoom-in" class="icon-btn" title="Ampliar">+</button>
+      </div>
+    </footer>
+  </div>
+  <textarea id="kbd" aria-label="Grade da planilha" autocomplete="off" spellcheck="false"></textarea>
+  <div id="toasts"></div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
