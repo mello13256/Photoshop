@@ -96,3 +96,11 @@
   .doc-content h1, .doc-content h2, .doc-content h3 { break-after: avoid; }
   .doc-content table, .doc-content img, .doc-content pre, .doc-content .callout { break-inside: avoid; }
 }
+
+/* Itens vindos do Word */
+.doc-content .tab { white-space: pre; tab-size: 4; }
+.doc-content .footnotes { font-size: .92em; color: #4a5361; }
+.doc-content .footnotes p { text-indent: 0; }
+.doc-content .img-missing { display: inline-block; padding: 0 .4em; border: 1px dashed #b8c0cc; border-radius: 4px; color: #8a94a6; font-size: .85em; }
+.doc-content .math { font-family: "Cambria Math", "STIX Two Math", Cambria, serif; font-style: italic; }
+.doc-content sup a { text-decoration: none; }

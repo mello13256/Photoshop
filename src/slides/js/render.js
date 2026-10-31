@@ -27,7 +27,14 @@ const PATHS = {
 };
 
 export function themeOf(pres) {
+  if (pres.theme === 'custom' && pres.customTheme) return pres.customTheme;
   return THEMES[pres.theme] || THEMES.claro;
+}
+
+// Primeira cor de um degradê CSS (para SVG e exportação)
+export function solidOf(c) {
+  if (!c || !c.startsWith('linear-gradient')) return c;
+  return /#[0-9a-f]{3,8}|rgba?\([^)]+\)/i.exec(c)?.[0] || null;
 }
 
 export function resolveColor(c, theme, fallback) {
@@ -80,13 +87,13 @@ export function renderElement(e, theme, pres, opts = {}) {
     const fill = resolveColor(s.fill, theme, theme.accent);
     const stroke = s.stroke ? resolveColor(s.stroke, theme, '#000') : null;
     if (s.kind === 'line') {
-      n.innerHTML = `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible"><line x1="0" y1="50" x2="100" y2="50" stroke="${stroke || fill}" stroke-width="${Math.max(2, s.strokeW || 6)}" vector-effect="non-scaling-stroke" stroke-linecap="round"/></svg>`;
+      n.innerHTML = `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible"><line x1="0" y1="50" x2="100" y2="50" stroke="${stroke || solidOf(fill)}" stroke-width="${Math.max(2, s.strokeW || 6)}" vector-effect="non-scaling-stroke" stroke-linecap="round"/></svg>`;
     } else if (['rect', 'round', 'ellipse'].includes(s.kind)) {
       const bgDiv = document.createElement('div');
       bgDiv.style.cssText = `position:absolute;inset:0;background:${fill || 'transparent'};border-radius:${s.kind === 'ellipse' ? '50%' : s.kind === 'round' ? `${s.radius ?? 24}px` : `${s.kind === 'rect' && s.radius && s.radius < 12 ? s.radius : 0}px`};${stroke ? `border:${s.strokeW || 4}px solid ${stroke};` : ''}`;
       n.append(bgDiv);
     } else {
-      n.insertAdjacentHTML('beforeend', `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible"><g fill="${fill || 'none'}" stroke="${stroke || 'none'}" stroke-width="${s.strokeW || 0}" vector-effect="non-scaling-stroke" stroke-linejoin="round">${PATHS[s.kind] || ''}</g></svg>`);
+      n.insertAdjacentHTML('beforeend', `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible"><g fill="${solidOf(fill) || 'none'}" stroke="${stroke || 'none'}" stroke-width="${s.strokeW || 0}" vector-effect="non-scaling-stroke" stroke-linejoin="round">${PATHS[s.kind] || ''}</g></svg>`);
       n.querySelectorAll('polygon,path').forEach((p) => p.setAttribute('vector-effect', 'non-scaling-stroke'));
     }
     if (e.text && (e.text.html || mode === 'edit')) n.append(textBox(e, theme, mode, opts));
@@ -99,7 +106,8 @@ export function renderElement(e, theme, pres, opts = {}) {
       img.src = src;
       img.alt = e.alt || '';
       img.draggable = false;
-      img.style.cssText = `position:absolute;inset:0;width:100%;height:100%;object-fit:${e.image.fit || 'cover'};border-radius:${e.image.radius || 0}px;${e.image.filter ? `filter:${e.image.filter};` : ''}`;
+      const flip = e.image.flipH || e.image.flipV ? `transform:scale(${e.image.flipH ? -1 : 1},${e.image.flipV ? -1 : 1});` : '';
+      img.style.cssText = `position:absolute;inset:0;width:100%;height:100%;object-fit:${e.image.fit || 'cover'};border-radius:${e.image.radius || 0}px;${e.image.filter ? `filter:${e.image.filter};` : ''}${flip}`;
       n.append(img);
     } else if (mode === 'edit' || mode === 'thumb') {
       n.innerHTML = `<div class="img-ph" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:${theme.accent2};color:${theme.text};font:32px ${theme.body};border-radius:${e.image.radius || 0}px"><svg viewBox="0 0 24 24" width="96" height="96" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>${mode === 'edit' ? `<span>${esc(e.ph || 'Imagem')}</span>` : ''}</div>`;
@@ -127,8 +135,8 @@ function textBox(e, theme, mode, opts) {
   const t = e.text;
   const box = document.createElement('div');
   box.className = 'sl-textbox';
-  const pad = e.type === 'shape' ? 24 : 6;
-  box.style.cssText = `position:absolute;inset:0;padding:${pad}px;display:flex;flex-direction:column;justify-content:${{ top: 'flex-start', middle: 'center', bottom: 'flex-end' }[t.valign || 'top']};`;
+  const pad = t.pad ? t.pad.map((v) => `${v}px`).join(' ') : `${e.type === 'shape' ? 24 : 6}px`;
+  box.style.cssText = `position:absolute;inset:0;padding:${pad};display:flex;flex-direction:column;justify-content:${{ top: 'flex-start', middle: 'center', bottom: 'flex-end' }[t.valign || 'top']};`;
   const inner = document.createElement('div');
   inner.className = 'sl-text';
   const role = e.role || 'body';
@@ -150,12 +158,14 @@ function tableBox(e, theme, mode) {
   wrap.style.cssText = 'position:absolute;inset:0;overflow:hidden';
   const fs = t.size || 30;
   let html = `<table class="sl-table" style="width:100%;height:100%;border-collapse:collapse;table-layout:fixed;font:${fs}px ${theme.body};color:${theme.text}">`;
+  if (t.cols && t.cols.length === t.rows[0]?.length) html += `<colgroup>${t.cols.map((f) => `<col style="width:${(f * 100).toFixed(2)}%">`).join('')}</colgroup>`;
   t.rows.forEach((row, r) => {
     html += '<tr>';
     row.forEach((cell, c) => {
       const head = t.header && r === 0;
-      const bg = head ? theme.accent : r % 2 ? theme.accent2 : 'transparent';
-      const color = head ? (isDark(theme.accent) ? '#ffffff' : '#111111') : theme.text;
+      const own = t.cells?.[r]?.[c];
+      const bg = own?.bg || (t.imported ? 'transparent' : head ? theme.accent : r % 2 ? theme.accent2 : 'transparent');
+      const color = own?.color || (head ? (isDark(own?.bg || theme.accent) ? '#ffffff' : '#111111') : theme.text);
       html += `<td data-r="${r}" data-c="${c}" style="padding:12px 18px;border-bottom:2px solid ${theme.accent2};background:${bg};color:${color};font-weight:${head ? 700 : 400};vertical-align:middle">${cell || ''}</td>`;
     });
     html += '</tr>';
@@ -181,7 +191,7 @@ export const SLIDE_CSS = `
 .sl-text p:last-child { margin-bottom: 0; }
 .sl-text ul, .sl-text ol { margin: 0; padding-left: 1.2em; }
 .sl-text li { margin: 0 0 0.45em; padding-left: 0.2em; }
-.sl-text li::marker { color: var(--accent); }
+.sl-text li::marker { color: var(--bullet, var(--accent)); }
 .sl-text a { color: var(--accent); }
 .sl-text b, .sl-text strong { font-weight: 700; }
 `;

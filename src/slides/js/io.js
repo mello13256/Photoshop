@@ -1,7 +1,7 @@
 // Arquivos do Lumina Apresentações: .lumslides (nativo), PPTX, PDF e PNG.
 import { loadVendor, decodeText } from '../../shared/native.js';
 import { escapeHtml } from '../../shared/ui.js';
-import { renderSlide, SLIDE_CSS, themeOf, resolveColor, bgCss, isDark } from './render.js';
+import { renderSlide, SLIDE_CSS, themeOf, resolveColor, bgCss, isDark, solidOf } from './render.js';
 import { W, H } from './themes.js';
 
 export function serialize(pres) {
@@ -63,6 +63,8 @@ export async function slideToPng(slide, pres, { width = 1920, chartImages = {} }
 const IN = (px) => px / 144; // 1920 px = 13,333 pol
 const PT = (px) => Math.max(6, Math.round(px * 0.5 * 10) / 10);
 const hex = (c) => {
+  if (!c || c === 'transparent') return undefined;
+  if (c.startsWith('linear-gradient')) c = solidOf(c);
   if (!c) return undefined;
   const m = /^#?([0-9a-f]{6})$/i.exec(c.trim());
   if (m) return m[1].toUpperCase();
@@ -112,10 +114,16 @@ function runsFromHtml(html, base) {
       if (st?.fontStyle === 'italic') f.italic = true;
       const fsz = /([\d.]+)px/.exec(st?.fontSize || '');
       if (fsz) f.fontSize = PT(+fsz[1]);
+      if (st?.fontFamily) f.fontFace = st.fontFamily.split(',')[0].replace(/["']/g, '').trim();
+      if (st?.backgroundColor && hex(st.backgroundColor)) f.highlight = hex(st.backgroundColor);
+      if (st?.textTransform === 'uppercase') f.caps = true;
+      if (tag === 'SUP') f.superscript = true;
+      if (tag === 'SUB') f.subscript = true;
       if (tag === 'A') f.hyperlink = { url: n.getAttribute('href') || '' };
       if (tag === 'P' || tag === 'DIV' || tag === 'LI' || /^H\d$/.test(tag)) {
         const p = { ...para };
         if (tag === 'LI') p.bullet = n.parentElement?.tagName === 'OL' ? { type: 'number' } : true;
+        if (n.style?.textAlign) p.align = n.style.textAlign === 'justify' ? 'justify' : n.style.textAlign;
         const startLen = runs.length;
         walk(n, f, p);
         if (runs.length === startLen) runs.push({ text: '', options: { ...base, ...p } });
@@ -142,6 +150,7 @@ export async function exportPptx(pres, chartImages = {}) {
   pptx.title = pres.title;
   pptx.author = 'Lumina Apresentações';
   const theme = themeOf(pres);
+  if (pres.customTheme?.imported) pptx.theme = { headFontFace: theme.head.split(',')[0].replace(/["']/g, ''), bodyFontFace: theme.body.split(',')[0].replace(/["']/g, '') };
   for (const s of pres.slides) {
     const slide = pptx.addSlide();
     const bg = s.bg || theme.bg;
@@ -154,9 +163,10 @@ export async function exportPptx(pres, chartImages = {}) {
         const t = e.text;
         const role = e.role || 'body';
         const color = resolveColor(t.color, theme, role === 'title' || role === 'big' || role === 'quote' ? theme.title : theme.text);
-        const font = (t.font === 'head' || (!t.font && ['title', 'big', 'quote'].includes(role)) ? theme.head : !t.font || t.font === 'body' ? theme.body : t.font).split(',')[0].replace(/"/g, '');
+        const font = (t.font === 'head' || (!t.font && ['title', 'big', 'quote'].includes(role)) ? theme.head : !t.font || t.font === 'body' ? theme.body : t.font).split(',')[0].replace(/["']/g, '').trim();
         const base = { fontFace: font, fontSize: PT(t.size), color: hex(color), bold: !!t.bold, italic: !!t.italic };
-        const opts = { ...box, align: t.align || 'left', valign: t.valign === 'middle' ? 'middle' : t.valign === 'bottom' ? 'bottom' : 'top', margin: e.type === 'shape' ? 12 : 3, lineSpacingMultiple: t.line || 1.2, fit: 'shrink' };
+        const margin = t.pad ? Math.round((t.pad.reduce((a, b) => a + b, 0) / 4) * 0.5) : e.type === 'shape' ? 12 : 3;
+        const opts = { ...box, align: t.align || 'left', valign: t.valign === 'middle' ? 'middle' : t.valign === 'bottom' ? 'bottom' : 'top', margin, lineSpacingMultiple: Math.round(((t.line || 1.2) / 1.2) * 100) / 100, fit: 'shrink' };
         if (e.type === 'shape') {
           Object.assign(opts, shapeOpts(pptx, e, theme));
         }
@@ -167,23 +177,34 @@ export async function exportPptx(pres, chartImages = {}) {
       } else if (e.type === 'image' && pres.assets[e.image.asset]) {
         const src = pres.assets[e.image.asset];
         const dims = await imageSize(src);
-        slide.addImage({ data: src, ...box, sizing: e.image.fit === 'contain' ? { type: 'contain', w: box.w, h: box.h } : { type: 'cover', w: box.w, h: box.h }, rounding: false, transparency: e.opacity < 1 ? Math.round((1 - e.opacity) * 100) : undefined, ...(dims ? {} : {}) });
+        slide.addImage({
+          data: src, ...box,
+          sizing: e.image.fit === 'fill' || !dims ? undefined : e.image.fit === 'contain' ? { type: 'contain', w: box.w, h: box.h } : { type: 'cover', w: box.w, h: box.h },
+          rounding: false, transparency: e.opacity < 1 ? Math.round((1 - e.opacity) * 100) : undefined,
+          flipH: !!e.image.flipH, flipV: !!e.image.flipV,
+        });
       } else if (e.type === 'table') {
         const t = e.table;
-        const rows = t.rows.map((row, r) => row.map((cell) => {
+        const rows = t.rows.map((row, r) => row.map((cell, c) => {
           const head = t.header && r === 0;
+          const own = t.cells?.[r]?.[c];
           const tmp = document.createElement('div');
-          tmp.innerHTML = cell || '';
-          return { text: tmp.textContent, options: { bold: head, color: hex(head ? (isDark(theme.accent) ? '#ffffff' : '#111111') : theme.text), fill: { color: hex(head ? theme.accent : r % 2 ? theme.accent2 : null) || undefined } } };
+          tmp.innerHTML = (cell || '').replace(/<br\s*\/?>/gi, '\n');
+          const bg = own?.bg || (t.imported ? null : head ? theme.accent : r % 2 ? theme.accent2 : null);
+          const color = own?.color || (head ? (isDark(own?.bg || theme.accent) ? '#ffffff' : '#111111') : theme.text);
+          return { text: tmp.textContent, options: { bold: head || /<b>|<strong>/i.test(cell || ''), color: hex(color), fill: hex(bg) ? { color: hex(bg) } : undefined } };
         }));
-        slide.addTable(rows, { ...box, fontSize: PT(t.size || 30), fontFace: theme.body.split(',')[0].replace(/"/g, ''), border: { type: 'solid', pt: 1, color: hex(theme.accent2) || 'DDDDDD' }, autoPage: false });
+        slide.addTable(rows, {
+          ...box, fontSize: PT(t.size || 30), fontFace: theme.body.split(',')[0].replace(/["']/g, ''), border: { type: 'solid', pt: 1, color: hex(theme.accent2) || 'DDDDDD' }, autoPage: false,
+          colW: t.cols?.length === t.rows[0]?.length ? t.cols.map((f) => f * box.w) : undefined,
+        });
       } else if (e.type === 'chart') {
         const ch = e.chart;
         const type = { bar: pptx.ChartType.bar, column: pptx.ChartType.bar, line: pptx.ChartType.line, area: pptx.ChartType.area, pie: pptx.ChartType.pie, doughnut: pptx.ChartType.doughnut }[ch.kind] || pptx.ChartType.bar;
         const data = ch.series.map((sr) => ({ name: sr.name, labels: ch.labels, values: sr.values.map((v) => +v || 0) }));
         slide.addChart(type, data, {
           ...box, barDir: ch.kind === 'bar' ? 'bar' : 'col', showTitle: !!ch.title, title: ch.title, showLegend: ch.series.length > 1 || ['pie', 'doughnut'].includes(ch.kind),
-          legendPos: 'b', chartColors: chartPalette(theme).map((c) => hex(c)), catAxisLabelColor: hex(theme.text), valAxisLabelColor: hex(theme.text), titleColor: hex(theme.title),
+          legendPos: 'b', chartColors: (ch.colors?.length ? ch.colors : chartPalette(theme)).map((c) => hex(c) || '888888'), catAxisLabelColor: hex(theme.text), valAxisLabelColor: hex(theme.text), titleColor: hex(theme.title),
           legendColor: hex(theme.text),
         });
         void chartImages;

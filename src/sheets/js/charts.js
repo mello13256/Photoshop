@@ -100,11 +100,30 @@ export class ChartLayer {
       this.boxes.clear();
       this.sheetId = sheet.id;
     }
-    if (charts.length) await this.ensureLib();
+    if (charts.some((c) => c.type !== 'image')) await this.ensureLib();
     const ids = new Set(charts.map((c) => c.id));
     for (const [id, b] of this.boxes) if (!ids.has(id)) { b.chart?.destroy(); b.el.remove(); this.boxes.delete(id); }
     for (const ch of charts) {
       let b = this.boxes.get(ch.id);
+      if (ch.type === 'image') {
+        // Imagem flutuante (logotipos, fotos)
+        if (!b) {
+          const el = document.createElement('div');
+          el.className = 'chart-box image-box';
+          const img = document.createElement('img');
+          img.draggable = false;
+          const handle = document.createElement('div');
+          handle.className = 'chart-resize';
+          el.append(img, handle);
+          this.layer.append(el);
+          b = { el, img, chart: null, sig: '' };
+          this.boxes.set(ch.id, b);
+          this.bind(ch.id, el, handle);
+        }
+        if (b.img.src !== ch.src) b.img.src = ch.src;
+        b.el.classList.toggle('selected', this.selected === ch.id);
+        continue;
+      }
       if (!b) {
         const el = document.createElement('div');
         el.className = 'chart-box';
@@ -161,7 +180,11 @@ export class ChartLayer {
       const z = this.grid.zoom;
       const move = (ev) => {
         const dx = (ev.clientX - sx) / z, dy = (ev.clientY - sy) / z;
-        if (resize) { ch.w = Math.max(200, o.w + dx); ch.h = Math.max(140, o.h + dy); }
+        if (resize) {
+          const min = ch.type === 'image' ? 24 : 200;
+          ch.w = Math.max(min, o.w + dx);
+          ch.h = ch.type === 'image' && !ev.shiftKey ? Math.max(min, (ch.w * o.h) / o.w) : Math.max(ch.type === 'image' ? 24 : 140, o.h + dy);
+        }
         else { ch.x = Math.max(0, o.x + dx); ch.y = Math.max(0, o.y + dy); }
         this.position();
       };
@@ -189,7 +212,9 @@ export class ChartLayer {
 
   // Imagem PNG do gráfico (para exportação)
   image(id) {
-    return this.boxes.get(id)?.chart?.toBase64Image() || null;
+    const b = this.boxes.get(id);
+    if (b?.img) return b.img.src;
+    return b?.chart?.toBase64Image() || null;
   }
 }
 

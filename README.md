@@ -6,8 +6,8 @@ Suíte de criação e produtividade para desktop (Windows, Linux e macOS), com i
 |---|---|---|---|
 | **Lumina Foto** | Edição de imagens | PNG, JPG, WebP, GIF, BMP, SVG, `.lumina` | `.lumina`, PNG, JPG, WebP |
 | **Lumina Texto** | Documentos | `.lumdoc`, Word (`.docx`), Markdown, HTML, TXT | `.lumdoc`, Word, PDF, HTML, Markdown, TXT |
-| **Lumina Planilhas** | Planilhas e análise de dados | `.lumsheet`, Excel (`.xlsx`), CSV | `.lumsheet`, Excel, CSV, PDF |
-| **Lumina Apresentações** | Slides | `.lumslides` | `.lumslides`, PowerPoint (`.pptx`), PDF, PNG |
+| **Lumina Planilhas** | Planilhas e análise de dados | `.lumsheet`, Excel (`.xlsx`, `.xlsm`), CSV | `.lumsheet`, Excel (`.xlsx`, `.xlsm`), CSV, PDF |
+| **Lumina Apresentações** | Slides | `.lumslides`, PowerPoint (`.pptx`) | `.lumslides`, PowerPoint (`.pptx`), PDF, PNG |
 
 A tela inicial reúne os modelos, os arquivos recentes e um botão para abrir qualquer arquivo. Ela escolhe sozinha o app certo. Também dá para arrastar arquivos para a janela. O tema pode ser claro, escuro ou seguir o sistema.
 
@@ -20,7 +20,15 @@ A tela inicial reúne os modelos, os arquivos recentes e um botão para abrir qu
 - Barra flutuante ao selecionar texto, tabelas com ferramentas próprias e imagens redimensionáveis com alinhamento
 - **Sumário automático**, painel de estrutura, localizar e substituir (com expressão regular), contagem de palavras e modo foco
 - **Histórico de versões** guardado dentro do arquivo, recuperação automática após travamentos e várias abas
-- Configuração de página (A4, Carta, Ofício…, margens, orientação, números de página)
+- Configuração de página (A4, Carta, Ofício…, margens, orientação, cabeçalho, rodapé e números de página)
+- **Abre arquivos do Word com fidelidade**. O importador é próprio e mantém:
+  - fontes, tamanhos, cores, realce e sombreamento;
+  - alinhamento, espaçamentos, recuos e bordas de parágrafo;
+  - listas com vários níveis e tipos de numeração;
+  - tabelas com células mescladas, sombreamento, bordas e estilos de tabela;
+  - imagens, links, notas de rodapé, quebras de página e sumário;
+  - tamanho da página e margens.
+- Ao salvar de volta em `.docx`, mantém cabeçalho, rodapé, notas de rodapé, espaçamentos e tabelas
 - Corretor ortográfico em português (no app desktop)
 - Modelos: trabalho acadêmico ABNT (capa, sumário, seções, referências), relatório, carta, currículo e ata
 
@@ -42,7 +50,36 @@ A tela inicial reúne os modelos, os arquivos recentes e um botão para abrir qu
 - **Tabela dinâmica feita de fórmulas**, que se atualiza sozinha quando os dados mudam
 - **Gráficos** (colunas, barras, linhas, área, pizza, rosca, dispersão) que você pode arrastar e redimensionar
 - Congelar painéis, várias planilhas por arquivo, copiar e colar com o Excel e o Google Sheets, e barra de status com soma, média, mínimo e máximo
+- Validação de dados completa: listas (fixas ou de um intervalo), números inteiros e decimais, datas, comprimento de texto e fórmula personalizada, com opção de rejeitar ou só avisar
+- Formatação condicional por **fórmula** (ex.: `=$D2="Pendente"`), links nas células (Ctrl+K), notas (Shift+F2), nomes definidos e imagens flutuantes
+- **Excel completo nos dois sentidos**. Abrir e salvar mantém:
+  - cores de tema e formatos numéricos;
+  - formatação condicional e validações;
+  - notas, links, nomes definidos e imagens;
+  - congelamento de painéis e cores das abas;
+  - **gráficos nativos do Excel**, editáveis no Excel e no LibreOffice.
+- **Macros**: veja a seção abaixo
 - Modelos: orçamento pessoal, lista de tarefas e controle de vendas
+
+### Macros
+
+As macros do Lumina usam JavaScript com funções em português. Abra em **Ferramentas › Macros** ou com **Alt+F8**.
+
+```js
+const fim = ultimaLinha('A');
+for (let i = 2; i <= fim; i++) definir('C' + i, cel('A' + i) * cel('B' + i));
+formatar('C1', { negrito: true, fundo: '#dbe4ff' });
+await recalcular();
+alerta('Total: ' + cel('C' + (fim + 1)));
+```
+
+- **Gravador de macros**: em Ferramentas › Gravar macro, suas edições viram código.
+- As macros rodam isoladas, num Worker sem acesso à internet, a arquivos ou à página. Tudo o que uma macro faz pode ser desfeito com Ctrl+Z, e ela é interrompida depois de 30 segundos.
+- As macros ficam salvas no `.lumsheet` e também dentro do `.xlsx`, numa parte `customXml` que o Excel preserva.
+- **VBA** (`.xlsm`):
+  - o Lumina lê o projeto VBA (formato CFB com compressão MS-OVBA) e mostra o código de cada módulo;
+  - converte os padrões comuns (`Range`/`Cells`, `For`, `If`, `Select Case`, `MsgBox`, `Debug.Print`, formatação…) para uma macro Lumina;
+  - ao salvar em `.xlsm`, o projeto VBA original é mantido intacto.
 
 ## Lumina Apresentações
 
@@ -55,6 +92,14 @@ A tela inicial reúne os modelos, os arquivos recentes e um botão para abrir qu
   - tela preta ou branca (B/W) e ponteiro laser (L);
   - anotações com cronômetro e prévia do próximo slide (S);
   - ir direto a um slide com número + Enter.
+- **Abre arquivos do PowerPoint**. O importador é próprio e mantém:
+  - layouts e mestres, com herança de estilos;
+  - textos com formatação, marcadores e numeração;
+  - formas, linhas e conectores;
+  - imagens (com recorte e espelhamento);
+  - tabelas com o estilo do PowerPoint e gráficos com as cores originais;
+  - grupos, SmartArt e fundos (cor, degradê e imagem);
+  - anotações, transições, animações de entrada e o tema do arquivo (fontes e cores).
 - Exporta para **PowerPoint** (com gráficos editáveis e anotações), PDF e PNG
 - Modelo de pitch de startup com 8 slides
 
@@ -92,7 +137,7 @@ npm run dist:mac     # gera .dmg (precisa de macOS)
 ```
 electron/            processo principal (protocolo app://, diálogos, PDF, corretor, menu de contexto) e preload
 src/index.html       tela inicial da suíte (src/shell/)
-src/shared/          estilo visual, componentes de interface, ícones e ponte com o sistema de arquivos
+src/shared/          estilo visual, componentes de interface, ícones, ponte com o sistema de arquivos e leitor OOXML
 src/photo/           Lumina Foto
 src/docs/            Lumina Texto (editor, importação/exportação, modelos)
 src/sheets/          Lumina Planilhas (motor de fórmulas, grade, gráficos, Excel/CSV)
@@ -101,7 +146,17 @@ src/vendor/          bibliotecas copiadas de node_modules no "npm install" (não
 scripts/vendor.js    cópia das bibliotecas
 ```
 
-Bibliotecas de terceiros (todas com licença livre): [ExcelJS](https://github.com/exceljs/exceljs) (xlsx), [Mammoth](https://github.com/mwilliamson/mammoth.js) (leitura de docx), [docx](https://github.com/dolanmiu/docx) (escrita de docx), [PptxGenJS](https://github.com/gitbrent/PptxGenJS) (pptx), [Chart.js](https://www.chartjs.org/) (gráficos) e [DOMPurify](https://github.com/cure53/DOMPurify) (limpeza de HTML colado).
+Bibliotecas de terceiros (todas com licença livre):
+
+- [ExcelJS](https://github.com/exceljs/exceljs) (escrita de xlsx)
+- [JSZip](https://github.com/Stuk/jszip) (pacotes Office)
+- [docx](https://github.com/dolanmiu/docx) (escrita de docx)
+- [PptxGenJS](https://github.com/gitbrent/PptxGenJS) (escrita de pptx)
+- [Chart.js](https://www.chartjs.org/) (gráficos)
+- [DOMPurify](https://github.com/cure53/DOMPurify) (limpeza de HTML)
+- [Mammoth](https://github.com/mwilliamson/mammoth.js) (modo de compatibilidade para .docx)
+
+A leitura de `.docx`, `.pptx`, `.xlsx` e VBA usa leitores próprios, que ficam em `src/shared/ooxml.js`, `*/js/*-import.js` e `sheets/js/vba.js`.
 
 ### Arquitetura em resumo
 

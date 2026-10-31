@@ -76,3 +76,28 @@ body.painter .grid-scroller { cursor: copy; }
 .fn-info code { font-family: var(--mono); display: block; padding: 8px; background: var(--surface-3); border-radius: 6px; margin-bottom: 8px; white-space: pre-wrap; }
 .fmt-preview { padding: 10px; background: var(--surface-3); border-radius: 6px; font-family: var(--mono); }
 .help-grid { display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; }
+.chart-box.image-box { padding: 0; background: transparent; border-color: transparent; box-shadow: none; border-radius: 0; }
+.chart-box.image-box img { width: 100%; height: 100%; display: block; object-fit: fill; pointer-events: none; }
+.chart-box.image-box.selected { border-color: var(--accent); }
+
+/* Macros */
+.macro-dlg { display: grid; grid-template-columns: 190px 1fr; gap: 14px; min-height: 420px; }
+.macro-side { border-right: 1px solid var(--line); padding-right: 10px; display: flex; flex-direction: column; gap: 4px; }
+.macro-list { display: flex; flex-direction: column; gap: 2px; }
+.macro-item { text-align: left; border: 0; background: none; padding: 7px 10px; border-radius: 7px; cursor: pointer; color: var(--text); font: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.macro-item:hover { background: var(--hover); }
+.macro-item.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.macro-item.add { color: var(--accent); }
+.macro-main { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.macro-main .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.macro-main .row input[type="text"] { flex: 1; min-width: 160px; }
+.macro-code { font: 12.5px/1.55 "Cascadia Code", Consolas, ui-monospace, monospace; width: 100%; min-height: 260px; resize: vertical; tab-size: 2; white-space: pre; padding: 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2, var(--bg)); color: var(--text); }
+.macro-out { font: 12px/1.5 Consolas, ui-monospace, monospace; background: var(--surface-2, var(--bg)); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; max-height: 120px; min-height: 44px; overflow: auto; margin: 0; white-space: pre-wrap; }
+.macro-help { font-size: 12.5px; line-height: 1.6; }
+.macro-help summary { cursor: pointer; font-weight: 600; margin-bottom: 4px; }
+.macro-help code { background: var(--hover); padding: 0 4px; border-radius: 4px; font-size: 12px; }
+.vba-mod { margin: 8px 0; }
+.vba-mod .row { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.vba-code { font: 12px/1.45 Consolas, ui-monospace, monospace; background: var(--surface-2, var(--bg)); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; max-height: 200px; overflow: auto; margin: 4px 0 0; }
+body.recording #badge { box-shadow: 0 0 0 3px #e03131; border-radius: 8px; animation: rec-blink 1.2s infinite; }
+@keyframes rec-blink { 50% { box-shadow: 0 0 0 3px transparent; } }

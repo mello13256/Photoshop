@@ -8,7 +8,7 @@ const fs = require('fs/promises');
 const { pathToFileURL } = require('url');
 
 const ROOT = path.join(__dirname, '..', 'src');
-const SUPPORTED = /\.(lumina|lumdoc|lumsheet|lumslides|png|jpe?g|webp|gif|bmp|svg|ico|avif|docx|xlsx|csv|tsv|pptx|pdf|md|markdown|txt|html?)$/i;
+const SUPPORTED = /\.(lumina|lumdoc|lumsheet|lumslides|png|jpe?g|webp|gif|bmp|svg|ico|avif|docx|xlsx|xlsm|csv|tsv|pptx|pdf|md|markdown|txt|html?)$/i;
 
 let win = null;
 let allowClose = false;

@@ -11,6 +11,7 @@ const FILES = {
   'pptxgen.bundle.js': 'pptxgenjs/dist/pptxgen.bundle.js',
   'chart.umd.min.js': 'chart.js/dist/chart.umd.min.js',
   'purify.min.js': 'dompurify/dist/purify.min.js',
+  'jszip.min.js': 'jszip/dist/jszip.min.js',
 };
 
 fs.mkdirSync(out, { recursive: true });

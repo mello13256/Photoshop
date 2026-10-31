@@ -469,12 +469,12 @@ export class Grid {
         const ar = m ? m.r1 : r, ac = m ? m.c1 : c;
         const cell = s.cells.get(KEY(ar, ac));
         const value = cell?.f || !cell ? wb.value(s, ar, ac) : cell.v;
-        const style = cell?.s || {};
+        const style = cell?.link ? { ...(cell.s || {}), u: true, color: cell.s?.color || '#1155cc' } : cell?.s || {};
         let bg = style.bg, color = style.color, bold = style.b;
         let bar = null;
         for (const rule of cfRules) {
           if (r < rule.range.r1 || r > rule.range.r2 || c < rule.range.c1 || c > rule.range.c2) continue;
-          const res = applyCf(rule, value);
+          const res = applyCf(rule, value, ar, ac);
           if (!res) continue;
           if (res.bg) bg = res.bg;
           if (res.color) color = res.color;
@@ -797,7 +797,8 @@ const hex = (h) => {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 };
 
-export function applyCf(rule, v) {
+export function applyCf(rule, v, r, c) {
+  if (rule.type === 'formula') return rule._hits?.has(KEY(r, c)) ? rule.style || { bg: '#ffc9c9', color: '#9c0006' } : null;
   const st = rule._stats;
   if (!st) return null;
   const p = rule.params || {};

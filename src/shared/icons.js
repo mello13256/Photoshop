@@ -101,6 +101,9 @@ const P = {
   maximize: '<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>',
   rowInsert: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 15v6M9 18h6"/>',
   colInsert: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18M15 12h6M18 9v6"/>',
+  tag: '<path d="M12 2H2v10l9.3 9.3a1 1 0 0 0 1.4 0l8.6-8.6a1 1 0 0 0 0-1.4Z"/><circle cx="7" cy="7" r="1.5"/>',
+  record: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="currentColor"/>',
+  stop: '<rect x="5" y="5" width="14" height="14" rx="2"/>',
 };
 
 export function icon(name, size = 18, cls = '') {

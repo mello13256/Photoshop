@@ -199,6 +199,19 @@ async function writeFormat(doc, html, fmt, path = null) {
   }
 }
 
+// Cabeçalho e rodapé do PDF (modelos do Chromium para printToPDF)
+function pdfHeaderFooter(page) {
+  const { header = '', footer = '', pageNumbers } = page;
+  if (!header && !footer && !pageNumbers) return {};
+  const box = (inner, pos) => `<div style="width:100%;margin:0 1cm;display:flex;justify-content:${pos};font-size:9px;color:#666;font-family:Arial,sans-serif">${inner}</div>`;
+  const foot = [footer && `<span>${escapeHtml(footer)}</span>`, pageNumbers && '<span class="pageNumber"></span>'].filter(Boolean);
+  return {
+    displayHeaderFooter: true,
+    headerTemplate: header ? box(`<span>${escapeHtml(header)}</span>`, 'center') : '<span></span>',
+    footerTemplate: foot.length ? box(foot.join('<span style="flex:1"></span>'), foot.length > 1 ? 'space-between' : 'center') : '<span></span>',
+  };
+}
+
 async function exportAs(fmt) {
   storeCurrent();
   const html = currentHtml();
@@ -207,11 +220,7 @@ async function exportAs(fmt) {
       const doc = S.doc;
       const out = await exportPdf(await io.standaloneHtml(doc, html, { forPrint: true }), {
         name: `${doc.title}.pdf`,
-        options: doc.page.pageNumbers ? {
-          displayHeaderFooter: true,
-          headerTemplate: '<span></span>',
-          footerTemplate: '<div style="width:100%;text-align:center;font-size:9px;color:#777;font-family:Arial"><span class="pageNumber"></span></div>',
-        } : {},
+        options: pdfHeaderFooter(doc.page),
       });
       if (out) toast(isNative ? `PDF exportado: ${fileName(out)}` : 'Use "Salvar como PDF" na janela de impressão.');
       return;
@@ -1157,6 +1166,8 @@ async function pageSetup() {
   const m = {};
   const marginInput = (k) => { m[k] = el('input', { type: 'number', step: 0.1, min: 0, max: 10, value: p.margins[k] }); return m[k]; };
   const nums = el('input', { type: 'checkbox', checked: p.pageNumbers });
+  const header = el('input', { type: 'text', value: p.header || '', placeholder: 'Ex.: Nome da empresa — Relatório anual' });
+  const footer = el('input', { type: 'text', value: p.footer || '', placeholder: 'Ex.: Confidencial' });
   const presets = el('div', { class: 'row' },
     el('span', { class: 'muted' }, 'Margens:'),
     ...[['Normal', [2.5, 2.5, 2.5, 2.5]], ['ABNT', [3, 2, 2, 3]], ['Estreita', [1.27, 1.27, 1.27, 1.27]], ['Larga', [2.54, 5.08, 2.54, 5.08]]].map(([l, v]) =>
@@ -1166,11 +1177,12 @@ async function pageSetup() {
     body: [el('div', { class: 'grid2' }, field('Tamanho do papel', size), field('Orientação', orient)), presets,
       el('div', { class: 'grid2' }, field('Superior (cm)', marginInput('top')), field('Inferior (cm)', marginInput('bottom')),
         field('Esquerda (cm)', marginInput('left')), field('Direita (cm)', marginInput('right'))),
+      field('Cabeçalho', header), field('Rodapé', footer),
       el('label', { class: 'check' }, nums, 'Numerar páginas no PDF e no Word')],
   });
   if (!ok) return;
   d.page = {
-    size: size.value, orientation: orient.value, pageNumbers: nums.checked,
+    size: size.value, orientation: orient.value, pageNumbers: nums.checked, header: header.value.trim(), footer: footer.value.trim(),
     margins: Object.fromEntries(['top', 'right', 'bottom', 'left'].map((k) => [k, clamp(parseFloat(m[k].value) || 0, 0, 10)])),
   };
   applyLook();

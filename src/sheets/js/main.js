@@ -5,8 +5,9 @@ import {
 } from '../../shared/ui.js';
 import { icon } from '../../shared/icons.js';
 import {
-  pickFiles, saveFile, exportPdf, isNative, registerApp, standaloneBoot, setTitle, addRecent, extOf, fileName, initTheme,
+  pickFiles, saveFile, exportPdf, isNative, registerApp, standaloneBoot, setTitle, addRecent, extOf, fileName, initTheme, pickImageDataUrl,
 } from '../../shared/native.js';
+import { Recorder, macrosDialog } from './macros.js';
 import { Workbook, KEY, RC, stripCell, clone, rangeText } from './model.js';
 import { Grid, CellEditor, norm, inRange, RH_W, CH_H } from './grid.js';
 import { parseInput, display, FORMATS, editText, fmtDate } from './format.js';
@@ -19,7 +20,7 @@ import { ChartLayer, CHART_TYPES, defaultChartPlacement } from './charts.js';
 import * as io from './io.js';
 import { SHEET_TEMPLATES } from './templates.js';
 
-const S = { books: [], book: null, seq: 1, clipboard: null, painter: null };
+const S = { books: [], book: null, seq: 1, clipboard: null, painter: null, recorder: new Recorder() };
 const wb = () => S.book.wb;
 const sheet = () => S.book.wb.sheet;
 
@@ -145,6 +146,8 @@ async function openFiles(files) {
       const ext = extOf(f.name);
       addBook(makeBook({ wb: w, title: f.name.replace(/\.[^.]+$/, ''), filePath: f.path, ext }));
       addRecent({ app: 'sheets', name: f.name, path: f.path });
+      if (w.vbaProject) toast('Esta pasta tem macros VBA. Elas ficam preservadas ao salvar em .xlsm. Veja o código em Ferramentas › Macros.');
+      else if (w.macros?.length) toast(`Este arquivo contém ${w.macros.length} macro(s) Lumina. Elas só rodam quando você mandar (Alt+F8).`);
     } catch (err) {
       console.error(err);
       toast(`Não foi possível abrir ${f.name}: ${err.message}`);
@@ -154,8 +157,8 @@ async function openFiles(files) {
 
 async function openDialog() {
   const files = await pickFiles([
-    { name: 'Planilhas', extensions: ['lumsheet', 'xlsx', 'csv', 'tsv'] },
-    { name: 'Planilha Lumina', extensions: ['lumsheet'] }, { name: 'Excel', extensions: ['xlsx'] }, { name: 'CSV', extensions: ['csv', 'tsv'] },
+    { name: 'Planilhas', extensions: ['lumsheet', 'xlsx', 'xlsm', 'csv', 'tsv'] },
+    { name: 'Planilha Lumina', extensions: ['lumsheet'] }, { name: 'Excel', extensions: ['xlsx', 'xlsm'] }, { name: 'CSV', extensions: ['csv', 'tsv'] },
   ]);
   if (files.length) openFiles(files);
 }
@@ -171,7 +174,7 @@ function chartImages(w = wb()) {
 
 async function save(b = S.book, saveAs = false) {
   if (editor.active) editor.commit();
-  const keep = !saveAs && b.filePath && ['xlsx', 'csv', 'tsv'].includes(b.ext);
+  const keep = !saveAs && b.filePath && ['xlsx', 'xlsm', 'csv', 'tsv'].includes(b.ext);
   try {
     let path;
     if (keep) path = await writeFormat(b, b.ext, b.filePath);
@@ -199,6 +202,7 @@ async function save(b = S.book, saveAs = false) {
 async function writeFormat(b, fmt, path = null) {
   const name = `${b.title}.${fmt}`;
   if (fmt === 'xlsx') return saveFile(await io.exportXlsx(b.wb, chartImages(b.wb)), { name, filters: [{ name: 'Pasta de trabalho do Excel', extensions: ['xlsx'] }], path });
+  if (fmt === 'xlsm') return saveFile(await io.exportXlsx(b.wb, chartImages(b.wb), { macroEnabled: true }), { name, filters: [{ name: 'Pasta de trabalho do Excel habilitada para macro', extensions: ['xlsm'] }], path });
   if (fmt === 'csv' || fmt === 'tsv') {
     const s = b.wb.sheet;
     if (b.wb.sheets.length > 1) toast(`CSV guarda só a planilha atual ("${s.name}").`);
@@ -254,7 +258,9 @@ function setCellInput(r, c, text, opts = {}) {
       if (p.fmt && (!style?.fmt || style.fmt === 'general')) cell.s = { ...(style || {}), fmt: p.fmt, ...(p.dec !== undefined ? { dec: p.dec } : {}), ...(p.cur ? { cur: p.cur } : {}) };
     }
     if (old?.note) cell.note = old.note;
+    if (old?.link) cell.link = old.link;
     w.setCell(s, rr, cc, cell);
+    S.recorder.cell(s.name, rr, cc, txt, w.sheets.length > 1);
   };
   w.transact('Editar célula', () => {
     if (opts.fillSelection) {
@@ -265,7 +271,10 @@ function setCellInput(r, c, text, opts = {}) {
       }
     } else apply(r, c, text);
   });
-  validateCell(r, c);
+  if (!validateCell(r, c)) {
+    wb().rejectLast();
+    if (S.recorder.active) S.recorder.lines.pop();
+  }
 }
 
 // Fecha parênteses esquecidos, como o Excel.
@@ -279,12 +288,65 @@ function autoClose(f) {
   return depth > 0 ? f + ')'.repeat(depth) : f;
 }
 
+// Verifica a regra de validação da célula. Retorna false se a entrada deve ser rejeitada.
 function validateCell(r, c) {
-  const v = sheet().validations.find((x) => inRange(x.range, r, c));
-  if (!v || v.type !== 'list') return;
-  const val = wb().value(sheet(), r, c);
-  if (val === null || val === '') return;
-  if (!v.items.some((i) => String(i).toLowerCase() === String(val).toLowerCase())) toast(`Valor fora da lista permitida: ${v.items.join(', ')}`);
+  const s = sheet();
+  const v = s.validations.find((x) => inRange(x.range, r, c));
+  if (!v || v.showError === false) return true;
+  const val = wb().value(s, r, c);
+  if (val === null || val === '') return true;
+  let ok = true;
+  if (v.type === 'list') {
+    const items = validationItems(v);
+    ok = items.some((i) => String(i).toLowerCase() === String(display(val, {})).toLowerCase() || String(i).toLowerCase() === String(val).toLowerCase());
+  } else if (v.type === 'custom') {
+    try {
+      const shifted = shiftFormula(String(v.f || '').replace(/^=/, ''), r - v.range.r1, c - v.range.c1);
+      const res = wb().evalFormula ? wb().evalFormula(s, r, c, shifted) : true;
+      ok = res === true || (typeof res === 'number' && res !== 0);
+    } catch { ok = true; }
+  } else {
+    const n = v.type === 'textLength' ? String(display(val, {})).length : typeof val === 'number' ? val : NaN;
+    if (Number.isNaN(n)) ok = false;
+    else if (v.type === 'whole' && !Number.isInteger(n)) ok = false;
+    else {
+      const num = (x) => { const p = parseInput(String(x ?? '')); return typeof p.v === 'number' ? p.v : Number(x); };
+      const a = num(v.a), b = num(v.b);
+      ok = { between: n >= a && n <= b, notBetween: n < a || n > b, eq: n === a, ne: n !== a, gt: n > a, lt: n < a, gte: n >= a, lte: n <= a }[v.op || 'between'] ?? true;
+    }
+  }
+  if (ok) return true;
+  const describe = () => {
+    if (v.type === 'list') return `Escolha um destes valores: ${validationItems(v).slice(0, 12).join(', ')}`;
+    if (v.type === 'custom') return 'O valor não atende à regra desta célula.';
+    const what = { whole: 'um número inteiro', decimal: 'um número', date: 'uma data', time: 'uma hora', textLength: 'um texto com comprimento' }[v.type] || 'um valor';
+    const op = { between: `entre ${v.a} e ${v.b}`, notBetween: `fora de ${v.a} a ${v.b}`, eq: `igual a ${v.a}`, ne: `diferente de ${v.a}`, gt: `maior que ${v.a}`, lt: `menor que ${v.a}`, gte: `maior ou igual a ${v.a}`, lte: `menor ou igual a ${v.a}` }[v.op || 'between'];
+    return `Digite ${what} ${op}.`;
+  };
+  const msg = v.msg || describe();
+  if (v.strict === false) { toast(`Atenção: ${msg}`); return true; }
+  toast(`Valor não permitido. ${msg}`);
+  return false;
+}
+
+function validationItems(v) {
+  if (!v.ref) return v.items || [];
+  try {
+    const tok = tokenize(v.ref.replace(/^=/, ''))[0];
+    if (tok?.t === 'ref') {
+      const ref = tok.v;
+      const src = ref.sheet ? wb().byName(ref.sheet) : sheet();
+      const out = [];
+      for (let r = ref.a.row; r <= (ref.b?.row ?? ref.a.row); r++) for (let c = ref.a.col; c <= (ref.b?.col ?? ref.a.col); c++) {
+        const x = wb().value(src, r, c);
+        if (x !== null && x !== '') out.push(display(x, src.get(r, c)?.s || {}));
+      }
+      return out;
+    }
+    const named = wb().names[v.ref.toUpperCase()];
+    if (named) return validationItems({ ref: named });
+  } catch { /* referência inválida */ }
+  return v.items || [];
 }
 
 function moveAfterEdit([dr, dc]) {
@@ -324,6 +386,7 @@ function selectionCells(rg = grid.sel, { createWithin = true } = {}) {
 
 function applyStyle(patch, label = 'Formatar') {
   const s = sheet();
+  S.recorder.style(rangeText(grid.sel), patch);
   wb().transact(label, () => {
     for (const [r, c] of selectionCells()) {
       const old = s.get(r, c);
@@ -802,7 +865,7 @@ const KEYMAP = {
   'Ctrl+Z': () => undo(), 'Ctrl+Y': () => redo(), 'Ctrl+Shift+Z': () => redo(),
   'Ctrl+S': () => save(), 'Ctrl+Shift+S': () => save(S.book, true), 'Ctrl+O': openDialog, 'Ctrl+N': () => newBook(), 'Ctrl+P': () => exportAs('pdf'),
   'Ctrl+B': () => toggleStyle('b'), 'Ctrl+I': () => toggleStyle('i'), 'Ctrl+U': () => toggleStyle('u'), 'Ctrl+5': () => toggleStyle('st'),
-  'Ctrl+F': () => findDialog(), 'Ctrl+H': () => findDialog(true), 'Ctrl+K': () => noteDialog(),
+  'Ctrl+F': () => findDialog(), 'Ctrl+H': () => findDialog(true), 'Ctrl+K': () => linkDialog(), 'Shift+F2': () => noteDialog(), 'Alt+F8': () => openMacros(),
   'Ctrl+D': () => fillDir('down'), 'Ctrl+R': () => fillDir('right'),
   'Ctrl+;': () => setCellInput(grid.sel.r, grid.sel.c, fmtDate(Math.floor(Date.now() / 864e5) + 25569 - new Date().getTimezoneOffset() / 1440, 'dd/mm/aaaa')),
   'Ctrl+Shift+L': () => toggleFilter(), 'Alt+=': () => autoSum('SUM'), 'Ctrl+Shift+4': () => setFormat('currency'), 'Ctrl+Shift+5': () => setFormat('percent'),
@@ -1097,7 +1160,9 @@ function cellMenu(e, h) {
     { label: 'Inserir gráfico', icon: 'chart', action: () => insertChart() },
     { label: 'Formatação condicional…', icon: 'palette', action: cfDialog },
     { label: 'Validação de dados…', icon: 'check', action: validationDialog },
-    { label: 'Nota…', icon: 'notes', key: 'Ctrl+K', action: noteDialog },
+    { label: 'Link…', icon: 'link', key: 'Ctrl+K', action: linkDialog },
+    ...(sheet().get(grid.sel.r, grid.sel.c)?.link ? [{ label: 'Abrir link', action: () => openLink(sheet().get(grid.sel.r, grid.sel.c).link) }] : []),
+    { label: 'Nota…', icon: 'notes', key: 'Shift+F2', action: noteDialog },
     { label: 'Formatar células…', icon: 'settings', key: 'Ctrl+1', action: formatCellsDialog },
   ], e.clientX, e.clientY);
 }
@@ -1139,6 +1204,8 @@ async function noteDialog() {
 
 function cellClicked(r, c, e) {
   const s = sheet();
+  const link = s.get(r, c)?.link;
+  if (link && (e.ctrlKey || e.metaKey)) { openLink(link); return; }
   const f = s.filter;
   if (f && r === f.r1 && c >= f.c1 && c <= f.c2) {
     const rect = grid.cellRect(r, c);
@@ -1338,6 +1405,7 @@ const CF_TYPES = [
   ['gt', 'Maior que…'], ['lt', 'Menor que…'], ['between', 'Entre…'], ['eq', 'Igual a…'], ['text', 'Texto que contém…'],
   ['dup', 'Valores duplicados'], ['unique', 'Valores únicos'], ['top', 'Primeiros N (maiores)'], ['bottom', 'Últimos N (menores)'],
   ['aboveAvg', 'Acima da média'], ['belowAvg', 'Abaixo da média'], ['blank', 'Células vazias'], ['error', 'Células com erro'],
+  ['formula', 'Usar uma fórmula…'],
 ];
 const CF_STYLES = [
   ['Vermelho claro', { bg: '#ffc9c9', color: '#9c0006' }], ['Amarelo', { bg: '#ffec99', color: '#7a5d00' }], ['Verde', { bg: '#c6efce', color: '#006100' }],
@@ -1356,11 +1424,12 @@ async function cfDialog() {
   const sync = () => {
     const t = type.value;
     params.replaceChildren();
-    if (['gt', 'lt', 'eq', 'text', 'top', 'bottom'].includes(t)) params.append(a);
+    if (['gt', 'lt', 'eq', 'text', 'top', 'bottom', 'formula'].includes(t)) params.append(a);
     if (t === 'between') params.append(a, el('span', {}, 'e'), b);
     if (t === 'bar') params.append(el('span', { class: 'muted' }, 'Cor'), barColor);
     else if (!t.startsWith('scale')) params.append(el('span', { class: 'muted' }, 'Formato'), styleSel);
-    a.placeholder = t === 'top' || t === 'bottom' ? 'N (ex.: 10)' : 'Valor';
+    a.placeholder = t === 'top' || t === 'bottom' ? 'N (ex.: 10)' : t === 'formula' ? `Ex.: =$D${sel.r1 + 1}="Pendente"` : 'Valor';
+    a.style.width = t === 'formula' ? '100%' : '';
   };
   type.addEventListener('change', sync);
   sync();
@@ -1381,6 +1450,11 @@ async function cfDialog() {
   if (rule.type === 'between') { rule.params.a = num(a); rule.params.b = num(b); }
   if (rule.type === 'top' || rule.type === 'bottom') rule.params.n = Math.max(1, parseInt(a.value, 10) || 10);
   if (rule.type === 'bar') rule.params.color = barColor.value;
+  if (rule.type === 'formula') {
+    const fx = a.value.trim().replace(/^=/, '');
+    try { parse(fx); } catch (e) { toast(`Fórmula inválida: ${e.message}`); return; }
+    rule.params.f = fx;
+  }
   if (!rule.type.startsWith('scale') && rule.type !== 'bar') rule.style = CF_STYLES[+styleSel.value][1];
   wb().transact('Formatação condicional', () => { wb().snapSheet(s); s.cf.push(rule); });
 }
@@ -1409,38 +1483,69 @@ function openValidationList() {
   const { r, c } = grid.sel;
   const v = s.validations.find((x) => x.type === 'list' && inRange(x.range, r, c));
   if (!v || !valBtn) return;
-  dropdown(valBtn, v.items.map((it) => ({ label: String(it), action: () => { setCellInput(r, c, String(it)); focusGrid(); } })));
+  dropdown(valBtn, validationItems(v).map((it) => ({ label: String(it), action: () => { setCellInput(r, c, String(it)); focusGrid(); } })));
 }
 
 async function validationDialog() {
   const s = sheet();
   const sel = clipRange();
   const existing = s.validations.find((x) => inRange(x.range, sel.r1, sel.c1));
-  const items = el('input', { type: 'text', value: existing?.items.join('; ') || '', placeholder: 'Ex.: Sim; Não; Talvez   ou   =A1:A10' });
+  const type = select([['list', 'Lista suspensa'], ['whole', 'Número inteiro'], ['decimal', 'Número decimal'], ['date', 'Data'], ['textLength', 'Comprimento do texto'], ['custom', 'Fórmula personalizada']], existing?.type || 'list');
+  const op = select([['between', 'entre'], ['notBetween', 'fora de'], ['eq', 'igual a'], ['ne', 'diferente de'], ['gt', 'maior que'], ['lt', 'menor que'], ['gte', 'maior ou igual a'], ['lte', 'menor ou igual a']], existing?.op || 'between');
+  const items = el('input', { type: 'text', value: existing?.type === 'list' ? (existing.ref ? `=${existing.ref}` : existing.items.join('; ')) : '', placeholder: 'Ex.: Sim; Não; Talvez   ou   =A1:A10' });
+  const a = el('input', { type: 'text', value: existing?.a ?? '', placeholder: 'Mínimo' });
+  const b = el('input', { type: 'text', value: existing?.b ?? '', placeholder: 'Máximo' });
+  const f = el('input', { type: 'text', value: existing?.f ? `=${existing.f}` : '', placeholder: `Ex.: =${colName(sel.c1)}${sel.r1 + 1}>HOJE()` });
+  const msg = el('input', { type: 'text', value: existing?.msg || '', placeholder: 'Mensagem de erro (opcional)' });
+  const strict = el('input', { type: 'checkbox', checked: existing ? existing.strict !== false : true });
+  const params = el('div');
+  const sync = () => {
+    const t = type.value;
+    params.replaceChildren();
+    if (t === 'list') params.append(field('Itens (separados por ";") ou intervalo', items));
+    else if (t === 'custom') params.append(field('Fórmula (verdadeira = permitido), relativa à primeira célula', f));
+    else {
+      const row = el('div', { class: 'grid2' }, field('Condição', op), field('Valor', a));
+      params.append(row);
+      if (op.value === 'between' || op.value === 'notBetween') params.append(field('E', b));
+      a.placeholder = t === 'date' ? 'dd/mm/aaaa' : 'Valor';
+      b.placeholder = t === 'date' ? 'dd/mm/aaaa' : 'Máximo';
+    }
+  };
+  type.addEventListener('change', sync);
+  op.addEventListener('change', sync);
+  sync();
   const ok = await dialog({
-    title: 'Validação de dados', width: 480,
-    body: [el('p', { class: 'muted' }, `Lista suspensa para ${rangeText(sel)}.`), field('Itens (separados por ";") ou intervalo', items)],
+    title: 'Validação de dados', width: 500,
+    body: [el('p', { class: 'muted' }, `Regra para ${rangeText(sel)}.`), field('Permitir', type), params, field('Mensagem de erro', msg),
+      el('label', { class: 'check' }, strict, 'Rejeitar valores inválidos (desmarcado: só avisa)')],
     extraButtons: existing ? [{ label: 'Remover', onClick: (close) => { wb().transact('Remover validação', () => { wb().snapSheet(s); s.validations = s.validations.filter((x) => x !== existing); }); close(false); } }] : [],
   });
   if (!ok) return;
-  let list;
-  const t = items.value.trim();
-  if (t.startsWith('=')) {
-    try {
-      const tok = tokenize(t.slice(1))[0];
-      const ref = tok.v;
-      list = [];
-      for (let r = ref.a.row; r <= (ref.b?.row ?? ref.a.row); r++) for (let c = ref.a.col; c <= (ref.b?.col ?? ref.a.col); c++) {
-        const v = wb().value(ref.sheet ? wb().byName(ref.sheet) : s, r, c);
-        if (v !== null && v !== '') list.push(display(v, {}));
-      }
-    } catch { toast('Intervalo inválido.'); return; }
-  } else list = t.split(/[;\n]/).map((x) => x.trim()).filter(Boolean);
-  if (!list.length) return;
+  const base = { range: sel, msg: msg.value.trim(), strict: strict.checked };
+  let rule;
+  if (type.value === 'list') {
+    const t = items.value.trim();
+    if (t.startsWith('=')) {
+      try { if (tokenize(t.slice(1))[0]?.t !== 'ref' && !wb().names[t.slice(1).toUpperCase()]) throw new Error(); } catch { toast('Intervalo inválido.'); return; }
+      rule = { ...base, type: 'list', items: [], ref: t.slice(1) };
+    } else {
+      const list = t.split(/[;\n]/).map((x) => x.trim()).filter(Boolean);
+      if (!list.length) return;
+      rule = { ...base, type: 'list', items: list };
+    }
+  } else if (type.value === 'custom') {
+    if (!f.value.trim()) return;
+    try { parse(f.value.trim().replace(/^=/, '')); } catch (e) { toast(`Fórmula inválida: ${e.message}`); return; }
+    rule = { ...base, type: 'custom', f: f.value.trim().replace(/^=/, '') };
+  } else {
+    const val = (x) => { const p = parseInput(x.value.trim()); return typeof p.v === 'number' ? String(p.v) : x.value.trim(); };
+    rule = { ...base, type: type.value, op: op.value, a: val(a), b: val(b) };
+  }
   wb().transact('Validação de dados', () => {
     wb().snapSheet(s);
     s.validations = s.validations.filter((x) => x !== existing);
-    s.validations.push({ range: sel, type: 'list', items: list });
+    s.validations.push(rule);
   });
   positionValidationButton();
 }
@@ -1470,6 +1575,14 @@ function updateChart(id, data, label = 'Editar gráfico') {
 
 function chartMenu(id, e) {
   const s = sheet();
+  if (s.charts.find((c) => c.id === id)?.type === 'image') {
+    contextMenu([
+      { label: 'Tamanho original', action: () => { const ch = s.charts.find((c) => c.id === id); const img = new Image(); img.onload = () => updateChart(id, { w: img.naturalWidth, h: img.naturalHeight }, 'Redimensionar imagem'); img.src = ch.src; } },
+      '-',
+      { label: 'Excluir imagem', icon: 'trash', action: () => wb().transact('Excluir imagem', () => { wb().snapSheet(s); s.charts = s.charts.filter((c) => c.id !== id); }) },
+    ], e.clientX, e.clientY);
+    return;
+  }
   contextMenu([
     { label: 'Editar gráfico…', icon: 'chart', action: () => chartDialog(id) },
     { label: 'Tipo', sub: CHART_TYPES.map(([k, l]) => ({ label: l, action: () => updateChart(id, { type: k }) })) },
@@ -1485,7 +1598,7 @@ function chartMenu(id, e) {
 async function chartDialog(id) {
   const s = sheet();
   const ch = s.charts.find((c) => c.id === id);
-  if (!ch) return;
+  if (!ch || ch.type === 'image') return;
   const type = select(CHART_TYPES, ch.type);
   const title = el('input', { type: 'text', value: ch.title || '', placeholder: 'Título do gráfico' });
   const rng = el('input', { type: 'text', value: rangeText(ch.range) });
@@ -1506,6 +1619,116 @@ async function chartDialog(id) {
     range2 = norm(a.r, a.c, b.r, b.c);
   }
   updateChart(id, { type: type.value, title: title.value, range: range2, seriesIn: seriesIn.value, legend: legend.value, stacked: stacked.checked, pick: m ? undefined : ch.pick });
+}
+
+// ---------------------------------------------------------------------------
+// Imagens, links, nomes definidos e macros
+
+async function insertImage() {
+  const src = await pickImageDataUrl();
+  if (!src) return;
+  const img = new Image();
+  img.src = src;
+  await img.decode().catch(() => {});
+  const s = sheet();
+  const scale = Math.min(1, 480 / (img.naturalWidth || 480), 360 / (img.naturalHeight || 360));
+  const ch = { id: `img${Date.now()}`, type: 'image', src, x: s.cols.pos(grid.sel.c) + 8, y: s.rows.pos(grid.sel.r) + 8, w: Math.round((img.naturalWidth || 320) * scale), h: Math.round((img.naturalHeight || 240) * scale) };
+  wb().transact('Inserir imagem', () => { wb().snapSheet(s); s.charts.push(ch); });
+}
+
+function openLink(link) {
+  if (link.startsWith('#')) {
+    // Link interno: #Planilha!A1 ou #A1
+    const target = link.slice(1);
+    const bang = target.lastIndexOf('!');
+    const sheetName = bang > 0 ? target.slice(0, bang).replace(/^'|'$/g, '') : null;
+    const addr = parseAddr((bang > 0 ? target.slice(bang + 1) : target).split(':')[0].replace(/\$/g, ''));
+    if (sheetName) {
+      const i = wb().sheets.findIndex((x) => x.name === sheetName);
+      if (i >= 0) { saveView(); wb().active = i; restoreView(); renderTabs(); refresh(); }
+    }
+    if (addr) grid.select(addr.r, addr.c);
+    return;
+  }
+  if (!/^(https?:|mailto:)/i.test(link)) { toast('Link não suportado.'); return; }
+  window.open(link, '_blank', 'noopener');
+}
+
+async function linkDialog() {
+  const { r, c } = grid.sel;
+  const s = sheet();
+  const cell = s.get(r, c);
+  const url = el('input', { type: 'text', value: cell?.link || '', placeholder: 'https://… ou #Planilha2!A1' });
+  const text = el('input', { type: 'text', value: cell && !cell.f ? display(cell.v ?? '', cell.s || {}) : '', placeholder: 'Texto exibido' });
+  const ok = await dialog({
+    title: `Link em ${colName(c)}${r + 1}`, width: 440, okText: 'Salvar',
+    body: [field('Endereço', url), field('Texto', text)],
+    extraButtons: cell?.link ? [{ label: 'Remover link', onClick: (close) => { url.value = ''; close(true); } }] : [],
+  });
+  if (!ok) return;
+  let link = url.value.trim();
+  if (link && !/^(https?:|mailto:|#)/i.test(link)) link = /^[\w.-]+@[\w.-]+$/.test(link) ? `mailto:${link}` : /^[A-Za-z]{1,3}\d+$/.test(link) || link.includes('!') ? `#${link}` : `https://${link}`;
+  wb().transact('Link', () => {
+    const base = cell ? stripCell(cell) : { v: null };
+    const next = { ...base, link: link || undefined };
+    if (!base.f && text.value.trim()) next.v = text.value.trim();
+    else if (!base.f && link && (base.v === null || base.v === '')) next.v = link.replace(/^mailto:|^#/, '');
+    wb().setCell(s, r, c, next);
+  });
+}
+
+async function namesDialog() {
+  const w = wb();
+  const list = el('div', { class: 'cf-list' });
+  const draw = () => list.replaceChildren(...(Object.keys(w.names).length ? Object.entries(w.names).map(([n, ref]) => el('div', { class: 'cf-item' },
+    el('span', {}, el('b', {}, n), ` = ${ref}`),
+    el('button', { class: 'icon-btn', html: icon('trash', 14), title: 'Excluir nome', onclick: () => { w.transact('Excluir nome', () => { w.snapWorkbook(); delete w.names[n]; }); draw(); } })))
+    : [el('p', { class: 'muted' }, 'Nenhum nome definido. Nomes deixam fórmulas mais legíveis: =SOMA(Vendas) em vez de =SOMA(B2:B90).')]));
+  draw();
+  const name = el('input', { type: 'text', placeholder: 'Ex.: Vendas' });
+  const sel = grid.sel;
+  const ref = el('input', { type: 'text', value: `${quoteName(sheet().name)}!$${colName(sel.c1)}$${sel.r1 + 1}:$${colName(sel.c2)}$${sel.r2 + 1}` });
+  const ok = await dialog({
+    title: 'Nomes definidos', width: 520, okText: 'Adicionar nome',
+    body: [list, el('div', { class: 'section-label' }, 'Novo nome'), el('div', { class: 'grid2' }, field('Nome', name), field('Refere-se a', ref))],
+  });
+  if (!ok) return;
+  const n = name.value.trim();
+  if (!/^[A-Za-zÀ-ÿ_][\wÀ-ÿ.]*$/.test(n) || /^[A-Za-z]{1,3}\d+$/.test(n)) { toast('Nome inválido. Use letras, números e _ (sem espaços), sem parecer um endereço.'); return; }
+  w.transact('Definir nome', () => { w.snapWorkbook(); w.names[n.toUpperCase()] = ref.value.trim().replace(/^=/, ''); });
+  toast(`Nome "${n}" criado.`);
+}
+
+const quoteName = (n) => (/^[A-Za-zÀ-ÿ_][\wÀ-ÿ.]*$/.test(n) ? n : `'${n.replace(/'/g, "''")}'`);
+
+async function openMacros(initialCode = null) {
+  let vbaModules = null;
+  if (wb().vbaProject) {
+    try {
+      const { extractVba } = await import('./vba.js');
+      vbaModules = extractVba(wb().vbaProject);
+    } catch (err) {
+      console.warn(err);
+      vbaModules = [];
+    }
+  }
+  await macrosDialog({
+    wb, grid: () => grid, refresh: () => { refresh(); renderTabs(); }, dirty: () => { S.book.dirty = true; renderTitle(); },
+  }, { initialCode: typeof initialCode === 'string' ? initialCode : null, vbaModules });
+  focusGrid();
+}
+
+function startRecording() {
+  S.recorder.start();
+  document.body.classList.add('recording');
+  toast('Gravando macro: edite células e formate normalmente. Ferramentas › Parar gravação para terminar.');
+}
+
+function stopRecording() {
+  const code = S.recorder.stop();
+  document.body.classList.remove('recording');
+  if (!code.trim()) { toast('Nada foi gravado.'); return; }
+  openMacros(code);
 }
 
 // ---------------------------------------------------------------------------
@@ -1717,6 +1940,7 @@ async function formatCellsDialog() {
 function exportItems() {
   return [
     { label: 'Excel (.xlsx)', icon: 'sheet', action: () => exportAs('xlsx') },
+    ...(wb().vbaProject ? [{ label: 'Excel com macros VBA (.xlsm)', icon: 'sheet', action: () => exportAs('xlsm') }] : []),
     { label: 'CSV (.csv)', icon: 'text', action: () => exportAs('csv') },
     { label: 'PDF (.pdf)', icon: 'pdf', key: 'Ctrl+P', action: () => exportAs('pdf') },
   ];
@@ -1788,7 +2012,9 @@ function setupMenus() {
       { label: 'Gráfico', icon: 'chart', sub: CHART_TYPES.map(([k, l]) => ({ label: l, action: () => insertChart(k) })) },
       { label: 'Tabela dinâmica…', icon: 'pivot', action: pivotDialog },
       { label: 'Função…', icon: 'function', key: 'Shift+F3', action: insertFunctionDialog },
-      { label: 'Nota…', icon: 'notes', key: 'Ctrl+K', action: noteDialog },
+      { label: 'Imagem…', icon: 'image', action: insertImage },
+      { label: 'Link…', icon: 'link', key: 'Ctrl+K', action: linkDialog },
+      { label: 'Nota…', icon: 'notes', key: 'Shift+F2', action: noteDialog },
       '-',
       { label: 'Nova planilha', icon: 'plus', action: () => { saveView(); wb().addSheet(); restoreView(); renderTabs(); } },
       { label: 'Data de hoje', icon: 'calendar', key: 'Ctrl+;', action: () => KEYMAP['Ctrl+;']() },
@@ -1819,9 +2045,17 @@ function setupMenus() {
       { label: 'Remover duplicatas…', action: removeDuplicates },
       { label: 'Validação de dados…', icon: 'check', action: validationDialog },
       { label: 'Tabela dinâmica…', icon: 'pivot', action: pivotDialog },
+      { label: 'Nomes definidos…', icon: 'tag', action: namesDialog },
       '-',
       { label: 'Soma automática', icon: 'sigma', key: 'Alt+=', action: () => autoSum('SUM') },
       { label: 'Recalcular tudo', action: () => { wb().recalc(); refresh(); toast('Recalculado.'); } },
+    ]],
+    ['Ferramentas', () => [
+      { label: 'Macros…', icon: 'code', key: 'Alt+F8', action: openMacros },
+      S.recorder.active
+        ? { label: 'Parar gravação', icon: 'stop', action: stopRecording }
+        : { label: 'Gravar macro', icon: 'record', action: startRecording },
+      ...(wb().vbaProject ? [{ label: 'Ver código VBA do arquivo…', icon: 'code', action: () => openMacros() }] : []),
     ]],
     ['Ajuda', () => [
       { label: 'Atalhos e recursos', icon: 'info', key: 'F1', action: helpDialog },
@@ -2010,6 +2244,6 @@ focusGrid();
 standaloneBoot({ openFiles });
 const onResize = debounce(() => charts.position(), 50);
 window.addEventListener('resize', onResize);
-window.__sheets = { S, grid, editor, charts, io, setCellInput, newBook, openFiles, save, exportAs, fill, pivotDialog, insertChart };
+window.__sheets = { S, grid, editor, charts, io, setCellInput, newBook, openFiles, save, exportAs, fill, pivotDialog, insertChart, openMacros, startRecording, stopRecording, applyStyle, wb };
 void RH_W;
 void KEY;

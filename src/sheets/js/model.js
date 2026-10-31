@@ -131,7 +131,7 @@ export class Sheet {
 
   set(r, c, cell) {
     const k = KEY(r, c);
-    if (!cell || (cell.v == null && !cell.f && (!cell.s || !Object.keys(cell.s).length) && !cell.note)) this.cells.delete(k);
+    if (!cell || (cell.v == null && !cell.f && (!cell.s || !Object.keys(cell.s).length) && !cell.note && !cell.link)) this.cells.delete(k);
     else this.cells.set(k, cell);
     this._used = null;
     if (r >= this.rows.count - 50) this.rows.count = Math.min(MAX_ROW + 1, Math.max(this.rows.count, r + 200));
@@ -160,9 +160,9 @@ export class Sheet {
   toJSON() {
     return {
       id: this.id, name: this.name,
-      cells: [...this.cells].map(([k, c]) => [k, { v: c.v, f: c.f, s: c.s, note: c.note, forceText: c.forceText }]),
+      cells: [...this.cells].map(([k, c]) => [k, { v: c.v, f: c.f, s: c.s, note: c.note, link: c.link, forceText: c.forceText }]),
       rows: this.rows.toJSON(), cols: this.cols.toJSON(), merges: clone(this.merges), freeze: clone(this.freeze),
-      cf: this.cf.map((rule) => { const r = { ...rule }; delete r._stats; return clone(r); }),
+      cf: this.cf.map((rule) => { const r = { ...rule }; delete r._stats; delete r._hits; return clone(r); }),
       charts: clone(this.charts), filter: clone(this.filter), validations: clone(this.validations), tabColor: this.tabColor, showGrid: this.showGrid,
     };
   }
@@ -199,6 +199,7 @@ export class Workbook {
     this.sheets = [new Sheet('Planilha1')];
     this.active = 0;
     this.names = {};
+    this.macros = [];
     this.undoStack = [];
     this.redoStack = [];
     this.tx = null;
@@ -399,6 +400,7 @@ export class Workbook {
             }
           }
         }
+        if (rule.type === 'formula') rule._hits = this.formulaHits(s, rule);
         const sorted = [...nums].sort((a, b) => a - b);
         const n = Math.max(1, Math.min(sorted.length, rule.params?.n || 10));
         const pctN = rule.params?.percent ? Math.max(1, Math.round((sorted.length * n) / 100)) : n;
@@ -412,6 +414,39 @@ export class Workbook {
         };
       }
     }
+  }
+
+  // Avalia uma fórmula avulsa como se estivesse na célula (r, c).
+  evalFormula(s, r, c, f) {
+    let v = evaluate(parse(String(f).replace(/^=/, '')), this.ctx(s, r, c));
+    if (v instanceof RangeRef) v = v.matrix()[0][0];
+    if (isMatrix(v)) v = v[0][0];
+    return v;
+  }
+
+  // Células onde a fórmula da regra (relativa ao canto superior esquerdo) é verdadeira.
+  formulaHits(s, rule) {
+    const hits = new Set();
+    const { r1, c1, r2, c2 } = rule.range;
+    const u = s.used();
+    const f = String(rule.params?.f || '').replace(/^=/, '');
+    if (!f) return hits;
+    const cache = new Map();
+    for (let r = r1; r <= Math.min(r2, Math.max(u.r, r1)); r++) {
+      for (let c = c1; c <= Math.min(c2, Math.max(u.c, c1)); c++) {
+        let ast;
+        try {
+          const shifted = shiftFormula(f, r - r1, c - c1);
+          ast = cache.get(shifted);
+          if (!ast) { ast = parse(shifted); cache.set(shifted, ast); }
+          let v = evaluate(ast, this.ctx(s, r, c));
+          if (v instanceof RangeRef) v = v.matrix()[0][0];
+          if (isMatrix(v)) v = v[0][0];
+          if (v === true || (typeof v === 'number' && v !== 0)) hits.add(KEY(r, c));
+        } catch { /* fórmula inválida: regra não se aplica */ }
+      }
+    }
+    return hits;
   }
 
   // ---- Transações e desfazer ---------------------------------------------------
@@ -455,13 +490,14 @@ export class Workbook {
   }
 
   snapshot() {
-    return { sheets: this.sheets.map((s) => s.toJSON()), active: this.active, names: { ...this.names } };
+    return { sheets: this.sheets.map((s) => s.toJSON()), active: this.active, names: { ...this.names }, macros: clone(this.macros) };
   }
 
   restoreSnapshot(snap) {
     this.sheets = snap.sheets.map((j) => Sheet.from(j));
     this.active = Math.min(snap.active, this.sheets.length - 1);
     this.names = { ...snap.names };
+    this.macros = clone(snap.macros || []);
   }
 
   applyTx(tx, dir) {
@@ -488,6 +524,15 @@ export class Workbook {
     this.applyTx(tx, 'undo');
     this.redoStack.push(tx);
     return tx.label;
+  }
+
+  // Descarta a última transação (ex.: entrada rejeitada pela validação), sem refazer.
+  rejectLast() {
+    const tx = this.undoStack.pop();
+    if (!tx) return;
+    this.applyTx(tx, 'undo');
+    this.recalc();
+    this.emit('edit');
   }
 
   redo() {
@@ -652,6 +697,7 @@ function stripCell(c) {
   if (c.f) out.f = c.f;
   if (c.s && Object.keys(c.s).length) out.s = c.s;
   if (c.note) out.note = c.note;
+  if (c.link) out.link = c.link;
   if (c.forceText) out.forceText = true;
   return out;
 }

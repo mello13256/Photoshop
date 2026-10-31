@@ -22,7 +22,7 @@ export const APPS = {
     name: 'Planilhas', full: 'Lumina Planilhas', icon: 'sheet', url: 'sheets/index.html',
     color: 'linear-gradient(135deg,#1f9d6b,#3fcf8e)', solid: '#2f9e6e',
     desc: 'Fórmulas em português, gráficos, tabelas dinâmicas e Excel.',
-    exts: ['lumsheet', 'xlsx', 'csv', 'tsv'],
+    exts: ['lumsheet', 'xlsx', 'xlsm', 'csv', 'tsv'],
   },
   slides: {
     name: 'Slides', full: 'Lumina Apresentações', icon: 'slides', url: 'slides/index.html',

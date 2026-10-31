@@ -19,7 +19,7 @@ export const STYLE_PRESETS = {
 };
 
 export function defaultPage() {
-  return { size: 'A4', orientation: 'portrait', margins: { top: 2.5, right: 2.5, bottom: 2.5, left: 2.5 }, pageNumbers: true };
+  return { size: 'A4', orientation: 'portrait', margins: { top: 2.5, right: 2.5, bottom: 2.5, left: 2.5 }, pageNumbers: true, header: '', footer: '' };
 }
 
 export function defaultStyle(preset = 'padrao') {
@@ -92,15 +92,15 @@ export async function importFile({ name, data }) {
   const ext = extOf(name);
   const title = baseName(name);
   if (ext === 'lumdoc') return { ...parseNative(decodeText(data)), native: true };
-  if (ext === 'docx') {
-    const mammoth = await loadVendor('mammoth.browser.min.js', 'mammoth');
-    const res = await mammoth.convertToHtml(
-      { arrayBuffer: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) },
-      {
-        styleMap: ["p[style-name='Title'] => p.title:fresh", "p[style-name='Subtitle'] => p.subtitle:fresh", "p[style-name='Quote'] => blockquote:fresh"],
-        convertImage: mammoth.images.imgElement((image) => image.read('base64').then((b64) => ({ src: `data:${image.contentType};base64,${b64}` }))),
-      });
-    return { title, html: sanitize(res.value) || '<p><br></p>' };
+  if (ext === 'docx' || ext === 'docm' || ext === 'dotx') {
+    try {
+      const { importDocx } = await import('./docx-import.js');
+      const res = await importDocx(data, defaultStyle('padrao'));
+      return { title: res.title || title, html: sanitize(res.html) || '<p><br></p>', page: { ...defaultPage(), ...res.page }, style: res.style };
+    } catch (err) {
+      console.warn('Importador próprio falhou, usando o modo simplificado:', err);
+      return importDocxSimple(data, title);
+    }
   }
   const text = decodeText(data);
   if (ext === 'md' || ext === 'markdown') return { title, html: mdToHtml(text) };
@@ -109,6 +109,17 @@ export async function importFile({ name, data }) {
     return { title, html: sanitize(body) };
   }
   return { title, html: text.split(/\r?\n/).map((l) => `<p>${escapeHtml(l) || '<br>'}</p>`).join('') };
+}
+
+async function importDocxSimple(data, title) {
+  const mammoth = await loadVendor('mammoth.browser.min.js', 'mammoth');
+  const res = await mammoth.convertToHtml(
+    { arrayBuffer: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) },
+    {
+      styleMap: ["p[style-name='Title'] => p.title:fresh", "p[style-name='Subtitle'] => p.subtitle:fresh", "p[style-name='Quote'] => blockquote:fresh"],
+      convertImage: mammoth.images.imgElement((image) => image.read('base64').then((b64) => ({ src: `data:${image.contentType};base64,${b64}` }))),
+    });
+  return { title, html: sanitize(res.value) || '<p><br></p>' };
 }
 
 // ---- Markdown ------------------------------------------------------------------
@@ -317,6 +328,8 @@ export async function exportDocx(doc, html) {
   const headColor = cssColorToHex(st.headColor) || '1F2A44';
   const firstFont = (f) => (f || '').split(',')[0].replace(/["']/g, '').trim() || 'Calibri';
   let listInstance = 0;
+  const NUM_FORMATS = { 1: 'DECIMAL', a: 'LOWER_LETTER', A: 'UPPER_LETTER', i: 'LOWER_ROMAN', I: 'UPPER_ROMAN' };
+  const numRef = (list) => (list.getAttribute('type') && NUM_FORMATS[list.getAttribute('type')] ? `lumina-num-${list.getAttribute('type')}` : 'lumina-num');
 
   const runsOf = async (node, fmt = {}) => {
     const out = [];
@@ -334,6 +347,10 @@ export async function exportDocx(doc, html) {
       if (n.nodeType !== 1) continue;
       const t = n.tagName;
       if (t === 'BR') { out.push(new D.TextRun({ ...fmt, break: 1 })); continue; }
+      if (t === 'SUP' && footnoteIds.has(n.querySelector('a')?.getAttribute('href'))) {
+        out.push(new D.FootnoteReferenceRun(footnoteIds.get(n.querySelector('a').getAttribute('href'))));
+        continue;
+      }
       if (t === 'IMG') { const ir = await imageRun(n); if (ir) out.push(ir); continue; }
       const f = { ...fmt };
       if (t === 'STRONG' || t === 'B') f.bold = true;
@@ -343,17 +360,28 @@ export async function exportDocx(doc, html) {
       if (t === 'SUP') f.superScript = true;
       if (t === 'SUB') f.subScript = true;
       if (t === 'CODE') f.font = 'Consolas';
-      if (t === 'MARK') f.shading = { type: D.ShadingType.CLEAR, fill: cssColorToHex(n.style.backgroundColor) || 'FFF59D', color: 'auto' };
+      if (t === 'MARK') {
+        const fill = cssColorToHex(n.style.backgroundColor) || 'FFFF00';
+        const named = { FFFF00: 'yellow', '00FF00': 'green', '00FFFF': 'cyan', FF00FF: 'magenta', '0000FF': 'blue', FF0000: 'red', '000080': 'darkBlue', '008080': 'darkCyan', '008000': 'darkGreen', '800080': 'darkMagenta', '800000': 'darkRed', '808000': 'darkYellow', '808080': 'darkGray', C0C0C0: 'lightGray' }[fill];
+        if (named) f.highlight = named;
+        else f.shading = { type: D.ShadingType.CLEAR, fill, color: 'auto' };
+      }
       const s = n.style;
       if (s) {
         if (s.fontWeight === 'bold' || +s.fontWeight >= 600) f.bold = true;
+        if (s.fontWeight === 'normal' || (+s.fontWeight && +s.fontWeight < 600)) f.bold = false;
+        if (s.fontStyle === 'normal') f.italics = false;
+        if (s.textTransform === 'uppercase') f.allCaps = true;
+        if (s.fontVariant === 'small-caps') f.smallCaps = true;
+        const ls = /(-?[\d.]+)pt/.exec(s.letterSpacing || '');
+        if (ls) f.characterSpacing = Math.round(+ls[1] * 20);
         if (s.fontStyle === 'italic') f.italics = true;
         if (s.textDecoration?.includes('underline') || s.textDecorationLine?.includes('underline')) f.underline = {};
         if (s.textDecoration?.includes('line-through') || s.textDecorationLine?.includes('line-through')) f.strike = true;
         const col = cssColorToHex(s.color);
         if (col) f.color = col;
         const bg = cssColorToHex(s.backgroundColor);
-        if (bg) f.shading = { type: D.ShadingType.CLEAR, fill: bg, color: 'auto' };
+        if (bg && t !== 'MARK') f.shading = { type: D.ShadingType.CLEAR, fill: bg, color: 'auto' };
         if (s.fontFamily) f.font = firstFont(s.fontFamily);
         const fs = /([\d.]+)(pt|px)/.exec(s.fontSize || '');
         if (fs) f.size = Math.round((fs[2] === 'px' ? +fs[1] * 0.75 : +fs[1]) * 2);
@@ -378,6 +406,37 @@ export async function exportDocx(doc, html) {
     }
   };
 
+  // Espaçamento/recuo definidos no próprio bloco (vindos do Word ou do editor)
+  const lenPt = (v) => {
+    const m = /(-?[\d.]+)(pt|px|cm|mm|em)?/.exec(v || '');
+    if (!m) return null;
+    const x = +m[1];
+    return { pt: x, px: x * 0.75, cm: x * 28.3465, mm: x * 2.83465, em: x * st.size }[m[2] || 'px'];
+  };
+  const blockProps = (n, ctx = {}) => {
+    const s = n.style || {};
+    const o = {};
+    const spacing = {};
+    const mt = lenPt(s.marginTop), mb = lenPt(s.marginBottom);
+    if (mt !== null) spacing.before = Math.round(mt * 20);
+    if (mb !== null) spacing.after = Math.round(mb * 20);
+    if (s.lineHeight) {
+      if (/pt|px/.test(s.lineHeight)) { spacing.line = Math.round(lenPt(s.lineHeight) * 20); spacing.lineRule = D.LineRuleType ? D.LineRuleType.EXACT : 'exact'; }
+      else if (+s.lineHeight) spacing.line = Math.round(+s.lineHeight * 240);
+    }
+    if (Object.keys(spacing).length) o.spacing = spacing;
+    const indent = {};
+    const ml = lenPt(s.marginLeft), mr = lenPt(s.marginRight), ti = lenPt(s.textIndent);
+    if (ml) indent.left = Math.round(ml * 20);
+    if (mr) indent.right = Math.round(mr * 20);
+    if (ti !== null) { if (ti < 0) indent.hanging = Math.round(-ti * 20); else indent.firstLine = Math.round(ti * 20); }
+    else if (!ctx.noIndent && st.indent && n.tagName === 'P') indent.firstLine = cmToTwip(st.indent);
+    if (Object.keys(indent).length) o.indent = indent;
+    const bg = cssColorToHex(s.backgroundColor);
+    if (bg) o.shading = { type: D.ShadingType.CLEAR, fill: bg, color: 'auto' };
+    return o;
+  };
+
   const alignOf = (n) => {
     const a = n.style?.textAlign || (n.classList?.contains('align-center') ? 'center' : '');
     return { center: D.AlignmentType.CENTER, right: D.AlignmentType.RIGHT, justify: D.AlignmentType.JUSTIFIED, left: D.AlignmentType.LEFT }[a];
@@ -392,17 +451,17 @@ export async function exportDocx(doc, html) {
       }
       if (n.nodeType !== 1) continue;
       const t = n.tagName;
-      const marginLeft = parseFloat(n.style?.marginLeft) || 0;
       const common = { alignment: alignOf(n) };
-      if (marginLeft) common.indent = { left: cmToTwip(marginLeft) };
       if (/^H[1-4]$/.test(t) || n.classList.contains('title') || n.classList.contains('subtitle')) {
         const lvl = n.classList.contains('title') ? 0 : n.classList.contains('subtitle') ? -1 : +t[1];
         const size = lvl === 0 ? 2.6 : lvl === -1 ? 1.3 : headSizes[lvl - 1];
         const text = st.headCase === 'uppercase' && lvl === 1 ? n.textContent.toUpperCase() : null;
+        const bp = blockProps(n, { noIndent: true });
         out.push(new D.Paragraph({
           ...common,
+          ...bp,
           heading: lvl === 0 ? D.HeadingLevel.TITLE : lvl > 0 ? D.HeadingLevel[`HEADING_${lvl}`] : undefined,
-          spacing: { before: lvl > 0 ? 240 : 0, after: 120 },
+          spacing: { before: lvl > 0 ? 240 : 0, after: 120, ...(bp.spacing || {}) },
           keepNext: true,
           children: text ? [new D.TextRun({ text, bold: true, size: Math.round(baseHalfPts * size), color: headColor, font: firstFont(st.headFont || st.font) })]
             : await runsOf(n, { bold: lvl !== -1, size: Math.round(baseHalfPts * size), color: lvl === -1 ? '5F6B7A' : headColor, font: firstFont(st.headFont || st.font) }),
@@ -411,11 +470,10 @@ export async function exportDocx(doc, html) {
       }
       if (t === 'P' || (t === 'DIV' && !n.classList.contains('page-break') && !n.classList.contains('toc') && !n.classList.contains('callout'))) {
         if (n.querySelector('p, h1, h2, h3, table, ul, ol')) { out.push(...(await blocks(n, ctx))); continue; }
-        const lh = parseFloat(n.style?.lineHeight);
+        if (n.classList.contains('footnotes')) continue;
         out.push(new D.Paragraph({
           ...common,
-          spacing: lh ? { line: Math.round(lh * 240) } : undefined,
-          indent: ctx.noIndent ? common.indent : { firstLine: st.indent ? cmToTwip(st.indent) : undefined, left: common.indent?.left },
+          ...blockProps(n, ctx),
           children: await runsOf(n),
         }));
         continue;
@@ -436,6 +494,7 @@ export async function exportDocx(doc, html) {
         }));
         continue;
       }
+      if (t === 'HR' && n.nextElementSibling?.classList.contains('footnotes')) continue;
       if (t === 'HR') {
         out.push(new D.Paragraph({ border: { bottom: { style: D.BorderStyle.SINGLE, size: 6, color: 'D5DAE3', space: 1 } }, children: [] }));
         continue;
@@ -488,32 +547,71 @@ export async function exportDocx(doc, html) {
       out.push(new D.Paragraph({
         children: runs,
         ...(check ? { indent: { left: 360 * (level + 1) } }
-          : instance !== null ? { numbering: { reference: 'lumina-num', level, instance } } : { bullet: { level } }),
+          : instance !== null ? { numbering: { reference: numRef(list), level, instance } } : { bullet: { level } }),
       }));
       for (const nl of nested) out.push(...(await listItems(nl, level + 1, nl.tagName === 'OL' ? listInstance++ : null)));
     }
     return out;
   };
 
+  const borderOf = (css) => {
+    if (!css || /none/.test(css)) return { style: D.BorderStyle.NONE, size: 0, color: 'auto' };
+    const w = parseFloat(css) || 1;
+    const color = cssColorToHex(css.match(/rgba?\([^)]+\)|#[0-9a-f]{3,6}/i)?.[0] || '') || '000000';
+    return { style: /double/.test(css) ? D.BorderStyle.DOUBLE : /dashed/.test(css) ? D.BorderStyle.DASHED : /dotted/.test(css) ? D.BorderStyle.DOTTED : D.BorderStyle.SINGLE, size: Math.max(2, Math.round(w * 6)), color };
+  };
+
   const table = async (tbl) => {
     const rows = [];
+    const cols = [...tbl.querySelectorAll(':scope > colgroup > col')].map((c) => parseFloat(c.style.width) || 0);
+    const tableW = /px/.test(tbl.style.width) ? parseFloat(tbl.style.width) : null;
     for (const tr of tbl.rows) {
       const cells = [];
       for (const cell of tr.cells) {
         const isHead = cell.tagName === 'TH';
+        const cs = cell.style;
         const inner = await blocks(cell, { noIndent: true });
-        const kids = inner.length ? inner : [new D.Paragraph({ children: await runsOf(cell, isHead ? { bold: true } : {}) })];
+        const headFmt = isHead && cs.fontWeight !== 'normal' ? { bold: true } : {};
+        const kids = inner.length ? inner : [new D.Paragraph({ children: await runsOf(cell, headFmt) })];
+        const bg = cssColorToHex(cs.backgroundColor);
+        const fill = bg || (isHead && !cs.backgroundColor ? 'F1F4F9' : null);
+        const borders = {};
+        if (cs.borderTopStyle || cs.border) for (const [k, side] of [['top', 'Top'], ['bottom', 'Bottom'], ['left', 'Left'], ['right', 'Right']]) {
+          const style = cs[`border${side}Style`];
+          if (style) borders[k] = borderOf(style === 'none' ? 'none' : `${cs[`border${side}Width`]} ${style} ${cs[`border${side}Color`]}`);
+        }
         cells.push(new D.TableCell({
           children: kids,
           columnSpan: cell.colSpan > 1 ? cell.colSpan : undefined,
-          shading: isHead ? { type: D.ShadingType.CLEAR, fill: 'F1F4F9', color: 'auto' } : undefined,
+          rowSpan: cell.rowSpan > 1 ? cell.rowSpan : undefined,
+          shading: fill ? { type: D.ShadingType.CLEAR, fill, color: 'auto' } : undefined,
+          verticalAlign: cs.verticalAlign === 'middle' ? D.VerticalAlign.CENTER : cs.verticalAlign === 'bottom' ? D.VerticalAlign.BOTTOM : undefined,
+          borders: Object.keys(borders).length ? borders : undefined,
           margins: { top: 60, bottom: 60, left: 100, right: 100 },
         }));
       }
-      rows.push(new D.TableRow({ children: cells, tableHeader: tr.querySelector('th') !== null }));
+      rows.push(new D.TableRow({ children: cells, tableHeader: tr.querySelector('th') ? true : undefined }));
     }
-    return new D.Table({ rows, width: { size: 100, type: D.WidthType.PERCENTAGE } });
+    const widthTw = tableW ? Math.round(tableW * 15) : Math.round(contentWidthPx * 15);
+    return new D.Table({
+      rows,
+      width: tableW ? { size: widthTw, type: D.WidthType.DXA } : { size: 100, type: D.WidthType.PERCENTAGE },
+      columnWidths: cols.length && cols.every((x) => x > 0) ? cols.map((pct) => Math.round((pct / 100) * widthTw)) : undefined,
+      alignment: tbl.style.marginLeft === 'auto' ? D.AlignmentType.CENTER : undefined,
+    });
   };
+
+  // Notas de rodapé (geradas pelo importador ou pelo usuário no mesmo formato)
+  const footnoteIds = new Map();
+  const footnotes = {};
+  let fnSeq = 1;
+  for (const p of root.querySelectorAll('.footnotes > p[id^="nota-"]')) {
+    const id = fnSeq++;
+    footnoteIds.set(`#${p.id}`, id);
+    const clone = p.cloneNode(true);
+    clone.querySelector('sup')?.remove();
+    footnotes[id] = { children: [new D.Paragraph({ children: await runsOf(clone) })] };
+  }
 
   const children = await blocks(root);
   const [w, h] = pageDims({ ...doc.page, orientation: 'portrait' });
@@ -530,17 +628,18 @@ export async function exportDocx(doc, html) {
       },
     },
     numbering: {
-      config: [{
-        reference: 'lumina-num',
+      config: [null, ...Object.keys(NUM_FORMATS)].map((type) => ({
+        reference: type ? `lumina-num-${type}` : 'lumina-num',
         levels: Array.from({ length: 9 }, (_, l) => ({
           level: l,
-          format: [D.LevelFormat.DECIMAL, D.LevelFormat.LOWER_LETTER, D.LevelFormat.LOWER_ROMAN][l % 3],
-          text: `%${l + 1}.`,
+          format: type && l === 0 ? D.LevelFormat[NUM_FORMATS[type]] : [D.LevelFormat.DECIMAL, D.LevelFormat.LOWER_LETTER, D.LevelFormat.LOWER_ROMAN][l % 3],
+          text: `%${l + 1}${type === 'a' || type === 'A' ? ')' : '.'}`,
           alignment: D.AlignmentType.START,
           style: { paragraph: { indent: { left: 720 * (l + 1), hanging: 360 } } },
         })),
-      }],
+      })),
     },
+    footnotes,
     sections: [{
       properties: {
         page: {
@@ -548,8 +647,20 @@ export async function exportDocx(doc, html) {
           margin: { top: cmToTwip(m.top), right: cmToTwip(m.right), bottom: cmToTwip(m.bottom), left: cmToTwip(m.left) },
         },
       },
-      footers: doc.page.pageNumbers ? {
-        default: new D.Footer({ children: [new D.Paragraph({ alignment: D.AlignmentType.CENTER, children: [new D.TextRun({ children: [D.PageNumber.CURRENT], size: 18, color: '777777' })] })] }),
+      headers: doc.page.header ? {
+        default: new D.Header({ children: [new D.Paragraph({ alignment: D.AlignmentType.CENTER, children: [new D.TextRun({ text: doc.page.header, size: 18, color: '666666' })] })] }),
+      } : undefined,
+      footers: doc.page.pageNumbers || doc.page.footer ? {
+        default: new D.Footer({
+          children: [new D.Paragraph({
+            alignment: D.AlignmentType.CENTER,
+            children: [
+              ...(doc.page.footer ? [new D.TextRun({ text: doc.page.footer, size: 18, color: '666666' })] : []),
+              ...(doc.page.footer && doc.page.pageNumbers ? [new D.TextRun({ text: '   ·   ', size: 18, color: '999999' })] : []),
+              ...(doc.page.pageNumbers ? [new D.TextRun({ children: [D.PageNumber.CURRENT], size: 18, color: '777777' })] : []),
+            ],
+          })],
+        }),
       } : undefined,
       children: children.length ? children : [new D.Paragraph({ children: [] })],
     }],

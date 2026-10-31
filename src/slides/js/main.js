@@ -5,7 +5,7 @@ import {
 } from '../../shared/ui.js';
 import { icon } from '../../shared/icons.js';
 import {
-  pickFiles, saveFile, exportPdf, isNative, native, registerApp, standaloneBoot, setTitle, addRecent, extOf, fileName,
+  pickFiles, saveFile, exportPdf, isNative, native, registerApp, standaloneBoot, setTitle, addRecent, extOf, fileName, baseName,
   initTheme, pickImageDataUrl, loadVendor,
 } from '../../shared/native.js';
 import {
@@ -84,7 +84,13 @@ async function openFiles(files) {
     const ext = extOf(f.name);
     try {
       if (ext === 'pptx') {
-        toast('Importar .pptx ainda não é suportado. Exporte para PDF ou recrie no Lumina — a exportação para PowerPoint funciona.');
+        const { importPptx } = await import('./pptx-import.js');
+        const p = await importPptx(f.data, baseName(f.name));
+        if (!p.slides.length) throw new Error('nenhum slide encontrado');
+        // Salvar grava em .lumslides; o .pptx original continua intacto
+        addDeck(makeDeck(p, { filePath: null, ext: 'lumslides' }));
+        addRecent({ app: 'slides', name: f.name, path: f.path });
+        toast(`${p.slides.length} slides importados do PowerPoint. Use Exportar › PowerPoint para gravar de volta em .pptx.`);
         continue;
       }
       const p = io.parse(f.data);
@@ -97,7 +103,10 @@ async function openFiles(files) {
 }
 
 async function openDialog() {
-  const files = await pickFiles([{ name: 'Apresentação Lumina', extensions: ['lumslides'] }]);
+  const files = await pickFiles([
+    { name: 'Apresentações', extensions: ['lumslides', 'pptx'] },
+    { name: 'Apresentação Lumina', extensions: ['lumslides'] }, { name: 'PowerPoint', extensions: ['pptx'] },
+  ]);
   if (files.length) openFiles(files);
 }
 
@@ -251,7 +260,7 @@ async function initCharts(root) {
 function chartConfig(e, animate) {
   const t = themeOf(pres());
   const ch = e.chart;
-  const pal = io.chartPalette(t);
+  const pal = ch.colors?.length ? ch.colors : io.chartPalette(t);
   const pie = ch.kind === 'pie' || ch.kind === 'doughnut';
   return {
     type: { column: 'bar', bar: 'bar', line: 'line', area: 'line', pie: 'pie', doughnut: 'doughnut' }[ch.kind] || 'bar',
@@ -954,7 +963,8 @@ function renderProps() {
   if (!list.length) {
     const s = slide();
     const t = themeOf(pres());
-    secs.push(sec('Tema da apresentação', el('div', { class: 'theme-grid' }, ...Object.entries(THEMES).map(([id, th]) => el('button', {
+    const themes = [...(pres().customTheme ? [['custom', pres().customTheme]] : []), ...Object.entries(THEMES)];
+    secs.push(sec('Tema da apresentação', el('div', { class: 'theme-grid' }, ...themes.map(([id, th]) => el('button', {
       class: `theme-card${pres().theme === id ? ' on' : ''}`, onclick: () => { pres().theme = id; commit(); renderAll(); },
     }, el('div', { class: 'tp', style: { background: bgCss(th.bg, th) } }, el('b', { style: { color: th.title, fontFamily: th.head } }, 'Aa Título'), el('i', { style: { background: th.accent } })), el('span', {}, th.name))))));
     const bgType = s.bg?.type || 'theme';
@@ -1549,6 +1559,6 @@ new ResizeObserver(() => { fitScale(); renderOverlay(); }).observe(stage);
 S.decks.push(makeDeck(newPresentation()));
 activate(S.decks[0]);
 standaloneBoot({ openFiles });
-window.__slides = { S, present, exportAs, newDeck, addSlide, insertShape, insertChart, insertTable, io, pres, slide };
+window.__slides = { S, present, exportAs, newDeck, openFiles, addSlide, insertShape, insertChart, insertTable, io, pres, slide };
 void PALETTE;
 void prompt;

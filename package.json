@@ -23,6 +23,7 @@
     "electron": "44.8.0",
     "electron-builder": "26.15.3",
     "exceljs": "^4.4.0",
+    "jszip": "^3.10.2",
     "mammoth": "^1.13.0",
     "pptxgenjs": "^4.0.1"
   },
