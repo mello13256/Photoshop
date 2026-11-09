@@ -1,7 +1,7 @@
 {
   "name": "lumina-studio",
   "productName": "Lumina Studio",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Suíte Lumina: editor de fotos, texto, planilhas e apresentações para desktop.",
   "main": "electron/main.js",
   "author": "mello13256",
@@ -91,24 +91,26 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Lumina Studio",
-      "artifactName": "LuminaStudio-Setup-${version}.${ext}"
+      "artifactName": "LuminaStudio-Setup.${ext}"
     },
     "portable": {
-      "artifactName": "LuminaStudio-Portable-${version}.${ext}"
+      "artifactName": "LuminaStudio-Portable.${ext}"
     },
     "linux": {
       "icon": "build/icon.png",
       "target": [
         "AppImage"
       ],
-      "category": "Office"
+      "category": "Office",
+      "artifactName": "LuminaStudio-Linux.${ext}"
     },
     "mac": {
       "icon": "build/icon.png",
       "target": [
         "dmg"
       ],
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "artifactName": "LuminaStudio-macOS.${ext}"
     }
   }
 }

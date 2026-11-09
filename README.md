@@ -107,16 +107,27 @@ alerta('Total: ' + cel('C' + (fim + 1)));
 
 Camadas com 16 modos de mesclagem, seleções (letreiro, laço, varinha mágica), transformação livre, pincel com pressão, carimbo, desfoque/nitidez, subexposição/superexposição, degradê, texto editável, formas, mais de 25 ajustes e filtros com visualização ao vivo, e histórico.
 
-## Baixar o `.exe`
+## Baixar
 
-O GitHub Actions compila o aplicativo a cada push:
+**Site oficial: https://mello13256.github.io/Photoshop/**
 
-1. Abra a aba **Actions** do repositório e escolha a execução mais recente de **Build desktop**.
-2. Em **Artifacts**, baixe **LuminaStudio-Windows**. Ele traz o instalador (`LuminaStudio-Setup-<versão>.exe`) e a versão portátil (`LuminaStudio-Portable-<versão>.exe`).
+Também dá para baixar direto da [página de versões](https://github.com/mello13256/Photoshop/releases/latest):
 
-Para publicar uma versão oficial, crie uma tag (`git tag v2.0.0 && git push --tags`). Os instaladores vão para a página de *Releases*.
+| Sistema | Arquivo |
+|---|---|
+| Windows (instalador) | [LuminaStudio-Setup.exe](https://github.com/mello13256/Photoshop/releases/latest/download/LuminaStudio-Setup.exe) |
+| Windows (portátil) | [LuminaStudio-Portable.exe](https://github.com/mello13256/Photoshop/releases/latest/download/LuminaStudio-Portable.exe) |
+| macOS (Apple Silicon) | [LuminaStudio-macOS.dmg](https://github.com/mello13256/Photoshop/releases/latest/download/LuminaStudio-macOS.dmg) |
+| Linux | [LuminaStudio-Linux.AppImage](https://github.com/mello13256/Photoshop/releases/latest/download/LuminaStudio-Linux.AppImage) |
 
 > Como o executável não tem assinatura digital, o Windows SmartScreen pode avisar na primeira execução. Clique em "Mais informações" e depois em "Executar assim mesmo".
+
+### Publicar uma nova versão
+
+1. Atualize `version` no `package.json`.
+2. Crie e envie uma tag: `git tag v2.2.0 && git push origin v2.2.0`.
+
+O workflow **Build desktop** compila nos três sistemas e publica o release. Os nomes dos arquivos são fixos, então os links do site sempre apontam para a versão mais nova. O site fica em `site/`, e o workflow **Site (GitHub Pages)** o publica no branch `gh-pages`.
 
 ## Desenvolvimento
 
@@ -142,6 +153,7 @@ src/photo/           Lumina Foto
 src/docs/            Lumina Texto (editor, importação/exportação, modelos)
 src/sheets/          Lumina Planilhas (motor de fórmulas, grade, gráficos, Excel/CSV)
 src/slides/          Lumina Apresentações (temas, renderização, editor, PPTX/PDF)
+site/                site de download (GitHub Pages)
 src/vendor/          bibliotecas copiadas de node_modules no "npm install" (não versionadas)
 scripts/vendor.js    cópia das bibliotecas
 ```

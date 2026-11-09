@@ -55,8 +55,34 @@ jobs:
           path: ${{ matrix.files }}
           if-no-files-found: error
 
-      - name: Publicar release (tags v*)
-        if: startsWith(github.ref, 'refs/tags/v')
+  # Um único job publica o release depois que os três sistemas terminam
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publicar release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.files }}
+          name: Lumina Studio ${{ github.ref_name }}
+          generate_release_notes: true
+          body: |
+            Baixe pelo site: https://mello13256.github.io/Photoshop/
+
+            | Sistema | Arquivo |
+            |---|---|
+            | Windows (instalador) | LuminaStudio-Setup.exe |
+            | Windows (portátil) | LuminaStudio-Portable.exe |
+            | macOS (Apple Silicon) | LuminaStudio-macOS.dmg |
+            | Linux | LuminaStudio-Linux.AppImage |
+          files: |
+            dist/LuminaStudio-Setup.exe
+            dist/LuminaStudio-Portable.exe
+            dist/LuminaStudio-macOS.dmg
+            dist/LuminaStudio-Linux.AppImage
+          fail_on_unmatched_files: true
