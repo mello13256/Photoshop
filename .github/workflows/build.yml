@@ -55,21 +55,43 @@ jobs:
           path: ${{ matrix.files }}
           if-no-files-found: error
 
-  # Um único job publica o release depois que os três sistemas terminam
+  # Um único job publica o release depois que os três sistemas terminam.
+  # Sai automaticamente quando a versão do package.json muda no branch principal
+  # (cria a tag vX.Y.Z) ou quando uma tag v* é enviada.
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
     needs: build
+    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == format('refs/heads/{0}', github.event.repository.default_branch))
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Decidir versão
+        id: ver
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"; echo "go=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          tag="v$(node -p "require('./package.json').version")"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
+            echo "A versão $tag já foi publicada."; echo "go=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/download-artifact@v4
+        if: steps.ver.outputs.go == 'true'
         with:
           path: dist
           merge-multiple: true
 
       - name: Publicar release
+        if: steps.ver.outputs.go == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          name: Lumina Studio ${{ github.ref_name }}
+          tag_name: ${{ steps.ver.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Lumina Studio ${{ steps.ver.outputs.tag }}
           generate_release_notes: true
           body: |
             Baixe pelo site: https://mello13256.github.io/Photoshop/

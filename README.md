@@ -124,10 +124,7 @@ Também dá para baixar direto da [página de versões](https://github.com/mello
 
 ### Publicar uma nova versão
 
-1. Atualize `version` no `package.json`.
-2. Crie e envie uma tag: `git tag v2.2.0 && git push origin v2.2.0`.
-
-O workflow **Build desktop** compila nos três sistemas e publica o release. Os nomes dos arquivos são fixos, então os links do site sempre apontam para a versão mais nova. O site fica em `site/`, e o workflow **Site (GitHub Pages)** o publica no branch `gh-pages`.
+Atualize `version` no `package.json` (ex.: `2.2.0`) e envie para o branch principal. O workflow **Build desktop** compila nos três sistemas, cria a tag `v2.2.0` e publica o release. Enviar uma tag `v*` também funciona. Os nomes dos arquivos são fixos, então os links do site sempre apontam para a versão mais nova. O site fica em `site/`, e o workflow **Site (GitHub Pages)** o publica no branch `gh-pages`.
 
 ## Desenvolvimento
 
