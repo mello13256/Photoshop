@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lumina Studio — fotos, documentos, planilhas e apresentações</title>
+  <meta name="description" content="Suíte gratuita para Windows, Mac e Linux: editor de fotos, editor de texto, planilhas e apresentações. Abre e salva arquivos do Word, Excel e PowerPoint.">
+  <meta property="og:title" content="Lumina Studio">
+  <meta property="og:description" content="Fotos, documentos, planilhas e apresentações num só programa. Grátis, em português e offline.">
+  <meta property="og:image" content="img/home.webp">
+  <meta name="theme-color" content="#5b6cff">
+  <link rel="icon" href="img/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="#"><img src="img/logo.svg" alt="" width="32" height="32"> Lumina Studio</a>
+    <nav>
+      <a href="#apps">Apps</a>
+      <a href="#office">Office</a>
+      <a href="#ajuda">Ajuda</a>
+      <a class="nav-cta" href="#baixar">Baixar</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-text">
+        <span class="pill">Grátis · Em português · Funciona offline</span>
+        <h1>Fotos, documentos, planilhas e apresentações num só programa.</h1>
+        <p class="lead">O Lumina Studio reúne um editor de imagens com camadas, um editor de texto, planilhas com fórmulas em português e apresentações modernas. Ele abre e salva arquivos do Word, do Excel e do PowerPoint.</p>
+        <div class="cta">
+          <a class="btn primary big" id="main-download" href="https://github.com/mello13256/Photoshop/releases/latest/download/LuminaStudio-Setup.exe">
+            <span class="btn-icon" aria-hidden="true">⬇</span>
+            <span><b id="main-label">Baixar para Windows</b><small id="main-sub">Instalador · 64 bits</small></span>
+          </a>
+          <a class="btn ghost big" href="#baixar">Outras plataformas</a>
+        </div>
+        <p class="version" id="version">Versão mais recente no GitHub</p>
+      </div>
+      <div class="hero-shot">
+        <img src="img/home.webp" alt="Tela inicial do Lumina Studio com os quatro apps e modelos" width="1440" height="900">
+      </div>
+    </section>
+
+    <section id="apps" class="section">
+      <h2>Quatro apps, uma janela</h2>
+      <p class="section-lead">Troque de um para outro sem fechar nada. Seus arquivos continuam abertos.</p>
+      <div class="tabs" role="tablist">
+        <button role="tab" class="tab on" data-shot="docs" aria-selected="true">Texto</button>
+        <button role="tab" class="tab" data-shot="sheets" aria-selected="false">Planilhas</button>
+        <button role="tab" class="tab" data-shot="slides" aria-selected="false">Apresentações</button>
+        <button role="tab" class="tab" data-shot="photo" aria-selected="false">Foto</button>
+      </div>
+      <div class="showcase">
+        <img id="showcase-img" src="img/docs.webp" alt="Lumina Texto" width="1440" height="900" loading="lazy">
+      </div>
+      <div class="grid4">
+        <article class="card">
+          <div class="ic ic-docs" aria-hidden="true">T</div>
+          <h3>Lumina Texto</h3>
+          <ul>
+            <li>Estilo de documento com um clique, incluindo <b>ABNT</b></li>
+            <li>Comandos com “/” e atalhos Markdown</li>
+            <li>Sumário automático, histórico de versões e modo foco</li>
+            <li>Cabeçalho, rodapé, notas e exportação para PDF</li>
+          </ul>
+        </article>
+        <article class="card">
+          <div class="ic ic-sheets" aria-hidden="true">Σ</div>
+          <h3>Lumina Planilhas</h3>
+          <ul>
+            <li>Mais de 200 funções em <b>português ou inglês</b></li>
+            <li>Matrizes dinâmicas, PROCX, LET e tabela dinâmica</li>
+            <li>Gráficos, formatação condicional e validação</li>
+            <li><b>Macros</b> com gravador e leitura de VBA</li>
+          </ul>
+        </article>
+        <article class="card">
+          <div class="ic ic-slides" aria-hidden="true">▶</div>
+          <h3>Lumina Apresentações</h3>
+          <ul>
+            <li>Temas modernos e guias magnéticas</li>
+            <li>Transições e animações de entrada</li>
+            <li>Modo apresentador com anotações e cronômetro</li>
+            <li>Gráficos e tabelas editáveis</li>
+          </ul>
+        </article>
+        <article class="card">
+          <div class="ic ic-photo" aria-hidden="true">◐</div>
+          <h3>Lumina Foto</h3>
+          <ul>
+            <li>Camadas com 16 modos de mesclagem</li>
+            <li>Seleções, varinha mágica e transformação livre</li>
+            <li>Pincel com pressão, carimbo e degradê</li>
+            <li>Mais de 25 ajustes e filtros ao vivo</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="office" class="section office">
+      <h2>Feito para conversar com o Office</h2>
+      <p class="section-lead">Abra o arquivo que você recebeu, edite e devolva no mesmo formato.</p>
+      <div class="grid3">
+        <div class="fmt"><span class="badge b-word">.docx</span><p>Mantém fontes, cores, listas, tabelas mescladas, imagens, notas de rodapé, cabeçalho e rodapé.</p></div>
+        <div class="fmt"><span class="badge b-excel">.xlsx · .xlsm</span><p>Mantém fórmulas, cores de tema, formatação condicional, validações, notas, gráficos nativos e o VBA dos arquivos com macros.</p></div>
+        <div class="fmt"><span class="badge b-ppt">.pptx</span><p>Mantém layouts, temas, textos, formas, imagens, tabelas, gráficos, anotações e transições.</p></div>
+      </div>
+    </section>
+
+    <section id="baixar" class="section download">
+      <h2>Baixar o Lumina Studio</h2>
+      <p class="section-lead" id="dl-lead">Escolha o seu sistema. Todos os downloads vêm do GitHub.</p>
+      <div class="grid-dl">
+        <a class="dl" data-os="windows" href="https://github.com/mello13256/Photoshop/releases/latest/download/LuminaStudio-Setup.exe">
+          <span class="os">Windows</span>
+          <b>Instalador</b>
+          <small>Windows 10 e 11 · 64 bits · <span data-size="LuminaStudio-Setup.exe">.exe</span></small>
+        </a>
+        <a class="dl" data-os="windows" href="https://github.com/mello13256/Photoshop/releases/latest/download/LuminaStudio-Portable.exe">
+          <span class="os">Windows</span>
+          <b>Versão portátil</b>
+          <small>Roda sem instalar, até de um pendrive · <span data-size="LuminaStudio-Portable.exe">.exe</span></small>
+        </a>
+        <a class="dl" data-os="mac" href="https://github.com/mello13256/Photoshop/releases/latest/download/LuminaStudio-macOS.dmg">
+          <span class="os">macOS</span>
+          <b>Mac com Apple Silicon</b>
+          <small>Chips M1, M2, M3, M4… · <span data-size="LuminaStudio-macOS.dmg">.dmg</span></small>
+        </a>
+        <a class="dl" data-os="linux" href="https://github.com/mello13256/Photoshop/releases/latest/download/LuminaStudio-Linux.AppImage">
+          <span class="os">Linux</span>
+          <b>AppImage</b>
+          <small>Ubuntu, Fedora, Debian… · 64 bits · <span data-size="LuminaStudio-Linux.AppImage">.AppImage</span></small>
+        </a>
+      </div>
+      <p class="muted center">Prefere ver todas as versões? <a href="https://github.com/mello13256/Photoshop/releases">Lista de versões no GitHub</a> · <a href="https://github.com/mello13256/Photoshop">Código-fonte</a></p>
+    </section>
+
+    <section id="ajuda" class="section faq">
+      <h2>Perguntas frequentes</h2>
+      <details>
+        <summary>O Windows mostrou “O Windows protegeu o computador”. É seguro?</summary>
+        <p>O aviso aparece porque o programa ainda não tem assinatura digital paga. Clique em <b>Mais informações</b> e depois em <b>Executar assim mesmo</b>. Todo o código é aberto e o instalador é gerado automaticamente pelo GitHub a partir dele.</p>
+      </details>
+      <details>
+        <summary>No Mac aparece que o app “não pode ser aberto”.</summary>
+        <p>Arraste o Lumina Studio para a pasta Aplicativos. Depois clique nele com o botão direito, escolha <b>Abrir</b> e confirme. No macOS 15 ou mais novo, vá em <b>Ajustes do Sistema › Privacidade e Segurança</b> e clique em <b>Abrir mesmo assim</b>. Se aparecer que o app está “danificado”, rode no Terminal:</p>
+        <pre>xattr -cr "/Applications/Lumina Studio.app"</pre>
+      </details>
+      <details>
+        <summary>Como abro o AppImage no Linux?</summary>
+        <p>Dê permissão de execução e abra:</p>
+        <pre>chmod +x LuminaStudio-Linux.AppImage
+./LuminaStudio-Linux.AppImage</pre>
+      </details>
+      <details>
+        <summary>Preciso de internet ou de uma conta?</summary>
+        <p>Não. Tudo funciona offline e seus arquivos ficam só no seu computador.</p>
+      </details>
+      <details>
+        <summary>Qual a diferença entre o instalador e a versão portátil?</summary>
+        <p>O instalador cria atalhos no menu Iniciar e na área de trabalho e associa os arquivos do Lumina ao programa. A versão portátil é um único arquivo que roda direto, sem instalar nada.</p>
+      </details>
+      <details>
+        <summary>As macros de planilhas são seguras?</summary>
+        <p>As macros do Lumina rodam isoladas, sem acesso à internet nem aos seus arquivos, e só quando você manda. Macros VBA de arquivos .xlsm não rodam automaticamente: você pode ver o código e convertê-lo para uma macro Lumina.</p>
+      </details>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <img src="img/logo.svg" alt="" width="24" height="24">
+    <span>Lumina Studio · código aberto no <a href="https://github.com/mello13256/Photoshop">GitHub</a></span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
